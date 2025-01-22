@@ -1,0 +1,51 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.pid.lock
+
+# Directory for debugging with VSCode
+.vscode/
+
+# Dependency directories
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Build files
+dist/
+build/
+
+# Cache files
+.cache/
+.tmp/
+
+# IDE files
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.ps1
+.DS_Store
+Thumbs.db
+
+# Operating system files
+*.swp
+*.swo
+
+# Miscellaneous
+coverage/        # Code coverage results
+*.tgz            # Compressed archive files
+*.log            # Log files
+*.bak            # Backup files
