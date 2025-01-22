@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",                /* Use NodeNext to support ES module and CommonJS interop */
+    "moduleResolution": "NodeNext",     /* Ensure proper resolution of modules */
+    "target": "ES2020",                 /* Set the JavaScript target version */
+    "esModuleInterop": true,            /* Enable compatibility with CommonJS modules */
+    "strict": true,                     /* Enable all strict type-checking options */
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  }
+}
