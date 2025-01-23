@@ -78,7 +78,6 @@ interface IActivationToken {
   activationCode: string;
 }
 
-
 export const createActivationToken = (user: any): IActivationToken => {
   const activationCode = Math.floor(1000 + Math.random() * 9000).toString();
 
@@ -232,7 +231,7 @@ export const updateAccessToken = CatchAsyncError(
         }
       );
 
-      req.user =  user;
+      req.user = user;
 
       res.cookie("access_token", accessToken, accessTokenOptions);
       res.cookie("refresh_token", refreshToken, refreshTokenOptions);
@@ -260,7 +259,7 @@ export const getUserInfo = CatchAsyncError(
   }
 );
 
-interface ISocialAuthBody{
+interface ISocialAuthBody {
   email: string;
   name: string;
   avatar: string;
@@ -284,154 +283,152 @@ export const socialAuth = CatchAsyncError(
         sendToken(user, 200, res);
       }
     } catch (error: any) {
-      return next(new ErrorHandler(error.message,400));
+      return next(new ErrorHandler(error.message, 400));
     }
   }
 );
 
-
 // update user info
-interface IUpdateUserInfo{
-  name?:string,
-  email?:string,
+interface IUpdateUserInfo {
+  name?: string;
+  email?: string;
 }
 
 export const updateUserInfo = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const {name,email}= req.body as IUpdateUserInfo;
+      const { name, email } = req.body as IUpdateUserInfo;
       const userId = req.user?._id;
 
       const user = await userModel.findById(userId);
 
-      if(email && user){
-        const isEmailExist = await userModel.findById({email});
-        if(isEmailExist){
-          return next(new ErrorHandler("Email already exists",400))
+      if (email && user) {
+        const isEmailExist = await userModel.findById({ email });
+        if (isEmailExist) {
+          return next(new ErrorHandler("Email already exists", 400));
         }
         user.email = email;
       }
 
-      if(name && user){
+      if (name && user) {
         user.name = name;
       }
 
       await user?.save();
-      await redis.set(userId,JSON.stringify(user));
+      await redis.set(userId, JSON.stringify(user));
 
       res.status(200).json({
         success: true,
         user,
       });
-
-    } catch (error:any) {
-      return next(new ErrorHandler("error.message",400))
+    } catch (error: any) {
+      return next(new ErrorHandler("error.message", 400));
     }
-  })
-
-  // update user password
-
-  interface IUpdatePassword{
-    oldPassword: string;
-    newPassword: string;
   }
+);
 
-  export const updatePassword = CatchAsyncError(
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { oldPassword, newPassword } = req.body as IUpdatePassword;
+// update user password
 
-        if(!oldPassword || !newPassword){
-          return next(new ErrorHandler("Password fields are required",400));
-        }
-        const user = await userModel.findById(req.user?._id).select("+password");
+interface IUpdatePassword {
+  oldPassword: string;
+  newPassword: string;
+}
 
-        if(user?.password === undefined){
-          return next(new ErrorHandler("Invalid User",400));
-        }
-        const isPasswordMatch = await user?.comparePassword(oldPassword);
+export const updatePassword = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { oldPassword, newPassword } = req.body as IUpdatePassword;
 
-        if(!isPasswordMatch){
-          return next(new ErrorHandler("Old password does not match",400));
-        }
+      if (!oldPassword || !newPassword) {
+        return next(new ErrorHandler("Password fields are required", 400));
+      }
+      const user = await userModel.findById(req.user?._id).select("+password");
 
-        user.password = newPassword;
+      if (user?.password === undefined) {
+        return next(new ErrorHandler("Invalid User", 400));
+      }
+      const isPasswordMatch = await user?.comparePassword(oldPassword);
 
-        await user.save();
-
-        await redis.set(req.user?.id, JSON.stringify(user));
-
-        res.status(201).json({
-          success : "true",
-          user,
-        });
+      if (!isPasswordMatch) {
+        return next(new ErrorHandler("Old password does not match", 400));
       }
 
-        catch(error:any){
-          return next(new ErrorHandler(error.message,400));
-        }
-      })
+      user.password = newPassword;
 
-      interface IUpdateProfilePicture{
-        avatar : string;
-      }
+      await user.save();
 
-      // update profile picture
+      await redis.set(req.user?.id, JSON.stringify(user));
 
-      export const updateProfilePicture = CatchAsyncError(async(
-        req: Request, res: Response, next: NextFunction) => {
-        try {
-          const {avatar} = req.body;
-          const userId = req?.user?._id;
+      res.status(201).json({
+        success: "true",
+        user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
 
-          const user = await userModel.findById(userId);
+interface IUpdateProfilePicture {
+  avatar: string;
+}
 
-          if(avatar && user){
-            //first delete old image
-            if(user?.avatar?.public_id){
-              await cloudinary.v2.uploader.destroy(user?.avatar?.public_id);
+// update profile picture
 
-              const myCloud = await cloudinary.v2.uploader.upload(avatar,{
-                folder: "avatars",
-                width: 150,
-              });
-              user.avatar = {
-                  public_id : myCloud.public_id,
-                  url : myCloud.secure_url,
-              }
-            }
-            else{
-              const myCloud = await cloudinary.v2.uploader.upload(avatar,{
-                folder: "avatars",
-                width: 150,
-              });
-              user.avatar = {
-                  public_id : myCloud.public_id,
-                  url : myCloud.secure_url,
-              }
-            }
-          }
+export const updateProfilePicture = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { avatar } = req.body;
+      const userId = req?.user?._id;
 
-          await user?.save();
+      const user = await userModel.findById(userId);
 
-          await redis.set(userId,JSON.stringify(user));
+      if (avatar && user) {
+        //first delete old image
+        if (user?.avatar?.public_id) {
+          await cloudinary.v2.uploader.destroy(user?.avatar?.public_id);
 
-          res.status(200).json({
-            success : "true",
-            user,
+          const myCloud = await cloudinary.v2.uploader.upload(avatar, {
+            folder: "avatars",
+            width: 150,
           });
-        
+          user.avatar = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
+        } else {
+          const myCloud = await cloudinary.v2.uploader.upload(avatar, {
+            folder: "avatars",
+            width: 150,
+          });
+          user.avatar = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
         }
-          catch(error: any) {
-            return next(new ErrorHandler(error.message,400));
-          }
-      })
+      }
 
-      // get all users -- only for admins
-      export const  getAllUsers = CatchAsyncError(async(req:Request,res:Response,next :NextFunction) => {
-        try {
-          getAllUsersService(res);
-        } catch (error:any) {
-          return next(new ErrorHandler(error.messgae,400))
-        }
-      })
+      await user?.save();
+
+      await redis.set(userId, JSON.stringify(user));
+
+      res.status(200).json({
+        success: "true",
+        user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+// get all users -- only for admins
+export const getAllUsers = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      getAllUsersService(res);
+    } catch (error: any) {
+      return next(new ErrorHandler(error.messgae, 400));
+    }
+  }
+);
