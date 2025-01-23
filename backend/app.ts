@@ -6,6 +6,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { ErrorMiddleware } from "./middlewares/error";
 import userRouter from "./routes/user.route";
+import menuRouter from "./routes/menu.route";
 
 // body parser
 app.use(express.json({ limit: "50mb" }));
@@ -14,15 +15,12 @@ app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 
 //cors-origin resource sharing
-app.use(
-  cors({
-    origin: process.env.ORIGIN,
-  })
-);
+app.use(cors());
 
 // routes
 
 app.use("/api/v1", userRouter);
+app.use("/api/v1", menuRouter);
 
 // testing api
 app.get("/test", (req: Request, res: Response, next: NextFunction) => {

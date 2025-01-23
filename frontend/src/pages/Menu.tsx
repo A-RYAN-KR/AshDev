@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { PlusCircle, Edit2, Trash2, X, Search, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PlusCircle, Edit2, Trash2, X, Search } from 'lucide-react';
 
 interface MenuItem {
-  id: string;
+  _id: string;
   name: string;
   price: number;
   category: string;
@@ -10,37 +10,10 @@ interface MenuItem {
   isAvailable: boolean;
 }
 
-const dummyMenuItems: MenuItem[] = [
-  {
-    id: '1',
-    name: 'Margherita Pizza',
-    price: 14.99,
-    category: 'Main Course',
-    description: 'Fresh tomatoes, mozzarella, basil, and olive oil',
-    isAvailable: true,
-  },
-  {
-    id: '2',
-    name: 'Caesar Salad',
-    price: 9.99,
-    category: 'Starters',
-    description: 'Romaine lettuce, croutons, parmesan cheese with caesar dressing',
-    isAvailable: true,
-  },
-  {
-    id: '3',
-    name: 'Tiramisu',
-    price: 7.99,
-    category: 'Desserts',
-    description: 'Classic Italian dessert with coffee-soaked ladyfingers',
-    isAvailable: false,
-  },
-];
-
 const categories = ['Starters', 'Main Course', 'Desserts', 'Beverages'];
 
 export default function Menu() {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(dummyMenuItems);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,44 +29,76 @@ export default function Menu() {
 
   const [formData, setFormData] = useState(initialFormState);
 
+  // Fetch menu items from the API
+  useEffect(() => {
+    fetch('http://localhost:8000/api/v1/menu')
+      .then(response => response.json())
+      .then(apiResponse => {
+        if (Array.isArray(apiResponse.data)) {
+          setMenuItems(apiResponse.data); // Accessing the 'data' property
+        } else {
+          console.error('API response data is not an array:', apiResponse);
+          setMenuItems([]);
+        }
+      })
+      .catch(error => {
+        console.error('Failed to fetch menu items:', error);
+        setMenuItems([]); // Fallback to empty array on error
+      });
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' 
-        ? (e.target as HTMLInputElement).checked 
-        : name === 'price' 
-          ? parseFloat(value) || 0 
+      [name]: type === 'checkbox'
+        ? (e.target as HTMLInputElement).checked
+        : name === 'price'
+          ? parseFloat(value) || 0
           : value,
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingItem) {
-      setMenuItems(prev =>
-        prev.map(item =>
-          item.id === editingItem.id ? { ...formData, id: item.id } : item
-        )
-      );
-    } else {
-      const newItem = {
-        ...formData,
-        id: Math.random().toString(36).substr(2, 9),
-      };
-      setMenuItems(prev => [...prev, newItem]);
+
+    try {
+      if (editingItem) {
+        // Update existing item
+        const response = await fetch(`http://localhost:8000/api/v1/menu/${editingItem._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to update menu item: ${response.statusText}`);
+        }
+
+        const { data: updatedItem } = await response.json(); // Assuming the updated item is in `data`
+        setMenuItems(prev =>
+          prev.map(item => (item._id === updatedItem._id ? updatedItem : item))
+        );
+      } else {
+        // Add a new item
+        const response = await fetch('http://localhost:8000/api/v1/menu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to add menu item: ${response.statusText}`);
+        }
+
+        const { data: newItem } = await response.json(); // Assuming the new item is in `data`
+        setMenuItems(prev => [...prev, newItem]);
+      }
+
+      handleCloseForm();
+    } catch (error) {
+      console.error('Failed to submit menu item:', error);
     }
-    handleCloseForm();
-  };
-
-  const handleEdit = (item: MenuItem) => {
-    setEditingItem(item);
-    setFormData(item);
-    setShowForm(true);
-  };
-
-  const handleDelete = (id: string) => {
-    setMenuItems(prev => prev.filter(item => item.id !== id));
   };
 
   const handleCloseForm = () => {
@@ -103,11 +108,40 @@ export default function Menu() {
   };
 
   const filteredItems = menuItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const itemName = item?.name || ''; // Safely handle missing 'name' property
+    return itemName.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  // Add these functions within your component
+
+  const handleEdit = (item: MenuItem) => {
+    setEditingItem(item);
+    setFormData(item); // Pre-fill the form with the item's data
+    setShowForm(true);
+  };
+
+  const handleDelete = async (_id: string | undefined) => {
+    console.log('Deleting item:', _id);
+    if (!_id) {
+      console.error('Cannot delete: Menu item ID is undefined.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/menu/${_id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete menu item: ${response.statusText}`);
+      }
+
+      // Update state to remove the deleted item
+      setMenuItems(prev => prev.filter(item => item._id !== _id));
+    } catch (error) {
+      console.error('Failed to delete menu item:', error);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -150,7 +184,7 @@ export default function Menu() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredItems.map(item => (
-          <div key={item.id} className="bg-white rounded-lg shadow-md p-6">
+          <div key={item._id} className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-semibold">{item.name}</h3>
@@ -164,19 +198,25 @@ export default function Menu() {
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(item.id)}
+                  onClick={() => {
+                    if (item._id) {
+                      handleDelete(item._id);
+                    } else {
+                      console.error('Menu item does not have a valid ID:', item);
+                    }
+                  }}
                   className="p-1 text-red-500 hover:bg-red-50 rounded"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
+
               </div>
             </div>
             <p className="text-gray-600 mb-4">{item.description}</p>
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold">${Number(item.price).toFixed(2)}</span>
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                item.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-sm ${item.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
                 {item.isAvailable ? 'Available' : 'Unavailable'}
               </span>
             </div>
@@ -198,7 +238,7 @@ export default function Menu() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Name</label>
