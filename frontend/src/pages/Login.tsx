@@ -1,68 +1,114 @@
 import React, { useState } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
-import { ChefHat } from 'lucide-react';
+import axios from 'axios';
+import './Login.css';
 
-export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+const LoginPage: React.FC = () => {
+  const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const toggleMode = () => {
+    setIsSignUp(!isSignUp);
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    const email = (e.target as HTMLFormElement).email.value;
+    const password = (e.target as HTMLFormElement).password.value;
+
+    if (!email || !password) {
+      toast.error('Please fill in all fields!');
+      return;
+    }
+
     try {
-      // Add login logic here
-      navigate('/');
-    } catch (error) {
-      console.error('Login failed:', error);
+      const response = await axios.post('http://localhost:7000/api/v1/login', { email, password });
+      toast.success(response.data.message || 'Signed in successfully!');
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'An error occurred!');
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = (e.target as HTMLFormElement).name.value;
+    const email = (e.target as HTMLFormElement).email.value;
+    const password = (e.target as HTMLFormElement).password.value;
+
+    if (!name || !email || !password) {
+      toast.error('Please fill in all fields!');
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://localhost:7000/api/v1/registeration', {
+        name,
+        email,
+        password,
+      });
+
+      toast.success(response.data.message || 'Registration successful!');
+      if (response.data.activationToken) {
+        setTimeout(() => {
+          navigate('/otp', { state: { activationToken: response.data.activationToken } });
+        }, 1000);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'An error occurred!');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-        <div className="flex flex-col items-center mb-8">
-          <ChefHat className="w-12 h-12 text-blue-500 mb-2" />
-          <h2 className="text-2xl font-bold text-gray-900">Restaurant Admin</h2>
-          <p className="text-gray-600">Sign in to your account</p>
+    <div className="page-wrapper">
+      <div className = "newContainer">
+      <div className={`container ${isSignUp ? 'active' : ''}`}>
+        <div className="form-container sign-in">
+          <form onSubmit={handleSignIn}>
+            <h1>Sign In</h1>
+            <span>or use your account</span>
+            <input type="email" name="email" placeholder="Email" required />
+            <input type="password" name="password" placeholder="Password" required />
+            <button type="submit">Sign In</button>
+          </form>
         </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
+        <div className="form-container sign-up">
+          <form onSubmit={handleSignUp}>
+            <h1>Create Account</h1>
+            <span>or use your email for registration</span>
+            <input type="text" name="name" placeholder="Name" required />
+            <input type="email" name="email" placeholder="Email" required />
+            <input type="password" name="password" placeholder="Password" required />
+            <button type="submit">Sign Up</button>
+          </form>
+        </div>
+        <div className="toggle-container">
+          <div className="toggle">
+            <div className="toggle-panel toggle-left">
+              <h1>Welcome Back!</h1>
+              <p>To keep connected with us, please log in with your personal info</p>
+              <button className="toggle-button" onClick={toggleMode}>
+                Sign In
+              </button>
+            </div>
+            <div className="toggle-panel toggle-right">
+              <h1>Hello, Friend!</h1>
+              <p>Enter your personal details and start your journey with us</p>
+              <button className="toggle-button" onClick={toggleMode}>
+                Sign Up
+              </button>
+            </div>
           </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Sign in
-          </button>
-        </form>
+        </div>
       </div>
+      </div>
+      <ToastContainer />
     </div>
   );
-}
+};
+
+export default LoginPage;

@@ -7,18 +7,18 @@ import cookieParser from "cookie-parser";
 import { ErrorMiddleware } from "./middlewares/error";
 import userRouter from "./routes/user.route";
 
+
 // body parser
 app.use(express.json({ limit: "50mb" }));
 
 // cookie parser
 app.use(cookieParser());
 
-//cors-origin resource sharing
-app.use(
-  cors({
-    origin: process.env.ORIGIN,
-  })
-);
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(cors());
 
 // routes
 

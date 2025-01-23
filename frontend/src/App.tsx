@@ -9,6 +9,9 @@ import Revenue from './pages/Revenue';
 import Tables from './pages/Tables';
 import Reports from './pages/Reports';
 import Menu from './pages/Menu';
+import OtpVerificationPage from './components/OtpVerificationPage';
+
+
 
 const queryClient = new QueryClient();
 
@@ -18,6 +21,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/otp" element={<OtpVerificationPage />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="orders" element={<Orders />} />
