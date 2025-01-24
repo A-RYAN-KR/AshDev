@@ -7,6 +7,8 @@ import cookieParser from "cookie-parser";
 import { ErrorMiddleware } from "./middlewares/error";
 import userRouter from "./routes/user.route";
 import menuRouter from "./routes/menu.route";
+import orderRouter from "./routes/order.route";
+import tableRouter from "./routes/table.route";
 
 
 // body parser
@@ -27,6 +29,8 @@ app.use(cors());
 
 app.use("/api/v1", userRouter);
 app.use("/api/v1", menuRouter);
+app.use("/api/v1", orderRouter);
+app.use("/api/v1", tableRouter);
 
 // testing api
 app.get("/test", (req: Request, res: Response, next: NextFunction) => {

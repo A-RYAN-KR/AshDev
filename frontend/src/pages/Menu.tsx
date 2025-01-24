@@ -35,6 +35,7 @@ export default function Menu() {
       .then(response => response.json())
       .then(apiResponse => {
         if (Array.isArray(apiResponse.data)) {
+          console.log(apiResponse.data);
           setMenuItems(apiResponse.data); // Accessing the 'data' property
         } else {
           console.error('API response data is not an array:', apiResponse);

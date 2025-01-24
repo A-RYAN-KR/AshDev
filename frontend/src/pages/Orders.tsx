@@ -1,32 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar, Search } from 'lucide-react';
 
-const dummyOrders = [
-  {
-    id: '1',
-    table: 'Table 4',
-    items: ['Margherita Pizza', 'Caesar Salad', 'Coke'],
-    total: 42.50,
-    status: 'completed',
-    time: '2024-03-07 14:30',
-  },
-  {
-    id: '2',
-    table: 'Table 7',
-    items: ['Pasta Carbonara', 'Garlic Bread', 'Wine'],
-    total: 56.00,
-    status: 'pending',
-    time: '2024-03-07 14:45',
-  },
-  {
-    id: '3',
-    table: 'Table 2',
-    items: ['Burger', 'Fries', 'Milkshake'],
-    total: 28.50,
-    status: 'completed',
-    time: '2024-03-07 15:00',
-  },
-];
+interface Order {
+  id: string;
+  table: string;
+  items: string[];
+  total: number;
+  status: string;
+  time: string;
+}
 
 const StatusBadge = ({ status }: { status: string }) => {
   const colors = {
@@ -43,6 +25,67 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function Orders() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterDate, setFilterDate] = useState('');
+  const [filteredOrders, setFilteredOrders] = useState(orders);
+
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await fetch('http://localhost:7000/api/v1/orders');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log(data);
+        setOrders(data);
+      } catch (error: any) {
+        setError(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  if (loading) {
+    return <div>Loading orders...</div>;
+  }
+
+  if (error) {
+    return <div>Error loading orders: {error.message}</div>;
+  }
+
+  const handleSearch = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+
+    // Filter orders based on search query (matching order ID or item names)
+    const filtered = orders.filter((order) =>
+      order.id.toLowerCase().includes(query) ||
+      (Array.isArray(order.items) &&
+        order.items.some((item) => item.name.toLowerCase().includes(query)))
+    );
+    setFilteredOrders(filtered);
+  };
+
+  const handleDateFilter = (e) => {
+    const date = e.target.value;
+    setFilterDate(date);
+
+    // Filter orders based on the selected date
+    const filtered = orders.filter((order) => {
+      const orderDate = new Date(order.time).toISOString().split('T')[0]; // Extract date in YYYY-MM-DD format
+      return orderDate === date;
+    });
+    setFilteredOrders(filtered);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -55,14 +98,21 @@ export default function Orders() {
             <input
               type="text"
               placeholder="Search orders..."
+              value={searchQuery}
+              onChange={handleSearch}
               className="pl-10 pr-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
             />
             <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
           </div>
-          <button className="flex items-center px-4 py-2 bg-white border rounded-lg text-gray-600 hover:bg-gray-50">
-            <Calendar className="w-5 h-5 mr-2" />
-            Filter by Date
-          </button>
+          <div className="relative">
+            <input
+              type="date"
+              value={filterDate}
+              onChange={handleDateFilter}
+              className="pl-3 pr-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
+            />
+            <Calendar className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+          </div>
         </div>
       </div>
 
@@ -79,16 +129,37 @@ export default function Orders() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {dummyOrders.map((order) => (
+            {orders.map((order) => (
               <tr key={order.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.table}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{order.items.join(', ')}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.total.toFixed(2)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {/* Access the "number" field of the table object */}
+                  {order.table && typeof order.table === "object" ? order.table.number : order.table}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-500">
+                  {Array.isArray(order.items)
+                    ? order.items.map((item) => item.name).join(', ')
+                    : ''}
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  ${order.total ? order.total.toFixed(2) : 0}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <StatusBadge status={order.status} />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.time}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {/* Format the date */}
+                  {new Intl.DateTimeFormat('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true,
+                  }).format(new Date(order.time))}
+                </td>
               </tr>
             ))}
           </tbody>

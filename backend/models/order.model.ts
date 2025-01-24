@@ -1,7 +1,5 @@
 // 3. orders.schema.ts
 import mongoose, { Schema, Document } from "mongoose";
-import { TableModel } from "./table.model";
-import { MenuItemModel } from "./menu.model";
 
 interface Order extends Document {
   table: mongoose.Types.ObjectId; // Refers to a Table
