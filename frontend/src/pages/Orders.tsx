@@ -111,7 +111,6 @@ export default function Orders() {
               onChange={handleDateFilter}
               className="pl-3 pr-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
             />
-            <Calendar className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
           </div>
         </div>
       </div>
