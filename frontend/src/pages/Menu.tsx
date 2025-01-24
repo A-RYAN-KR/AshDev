@@ -31,7 +31,7 @@ export default function Menu() {
 
   // Fetch menu items from the API
   useEffect(() => {
-    fetch('http://localhost:8000/api/v1/menu')
+    fetch('http://localhost:7000/api/v1/menu')
       .then(response => response.json())
       .then(apiResponse => {
         if (Array.isArray(apiResponse.data)) {
@@ -65,7 +65,7 @@ export default function Menu() {
     try {
       if (editingItem) {
         // Update existing item
-        const response = await fetch(`http://localhost:8000/api/v1/menu/${editingItem._id}`, {
+        const response = await fetch(`http://localhost:7000/api/v1/menu/${editingItem._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
@@ -81,7 +81,7 @@ export default function Menu() {
         );
       } else {
         // Add a new item
-        const response = await fetch('http://localhost:8000/api/v1/menu', {
+        const response = await fetch('http://localhost:7000/api/v1/menu', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
@@ -128,7 +128,7 @@ export default function Menu() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/menu/${_id}`, {
+      const response = await fetch(`http://localhost:7000/api/v1/menu/${_id}`, {
         method: 'DELETE',
       });
 
