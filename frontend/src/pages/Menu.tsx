@@ -148,7 +148,6 @@ export default function Menu() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
-          <p className="text-gray-500">Add, edit, and manage menu items</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
