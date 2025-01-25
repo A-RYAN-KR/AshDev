@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Calendar, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface Order {
-  id: string;
-  table: string;
+  _id: string;
+  table: string | { number: string };
   items: string[];
   total: number;
   status: string;
@@ -27,11 +26,11 @@ const StatusBadge = ({ status }: { status: string }) => {
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterDate, setFilterDate] = useState('');
-  const [filteredOrders, setFilteredOrders] = useState(orders);
-
+  const [error, setError] = useState<Error | null>(null);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [dateRange, setDateRange] = useState<'week' | 'month' | 'custom' | ''>('week');
+  const [customRange, setCustomRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -53,6 +52,29 @@ export default function Orders() {
     fetchOrders();
   }, []);
 
+  useEffect(() => {
+    let filtered = orders;
+    const now = new Date();
+
+    if (dateRange === 'week') {
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      filtered = filtered.filter(order => new Date(order.time) >= startOfWeek);
+    } else if (dateRange === 'month') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      filtered = filtered.filter(order => new Date(order.time) >= startOfMonth);
+    } else if (dateRange === 'custom') {
+      const startDate = new Date(customRange.start);
+      const endDate = new Date(customRange.end);
+      filtered = filtered.filter(order => {
+        const orderDate = new Date(order.time);
+        return orderDate >= startDate && orderDate <= endDate;
+      });
+    }
+
+    setFilteredOrders(filtered);
+  }, [dateRange, customRange, orders]);
+
   if (loading) {
     return <div>Loading orders...</div>;
   }
@@ -60,31 +82,6 @@ export default function Orders() {
   if (error) {
     return <div>Error loading orders: {error.message}</div>;
   }
-
-  const handleSearch = (e) => {
-    const query = e.target.value.toLowerCase();
-    setSearchQuery(query);
-
-    // Filter orders based on search query (matching order ID or item names)
-    const filtered = orders.filter((order) =>
-      order.id.toLowerCase().includes(query) ||
-      (Array.isArray(order.items) &&
-        order.items.some((item) => item.name.toLowerCase().includes(query)))
-    );
-    setFilteredOrders(filtered);
-  };
-
-  const handleDateFilter = (e) => {
-    const date = e.target.value;
-    setFilterDate(date);
-
-    // Filter orders based on the selected date
-    const filtered = orders.filter((order) => {
-      const orderDate = new Date(order.time).toISOString().split('T')[0]; // Extract date in YYYY-MM-DD format
-      return orderDate === date;
-    });
-    setFilteredOrders(filtered);
-  };
 
   return (
     <div className="space-y-6">
@@ -94,26 +91,55 @@ export default function Orders() {
           <p className="text-gray-500">Manage and track all orders</p>
         </div>
         <div className="flex space-x-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search orders..."
-              value={searchQuery}
-              onChange={handleSearch}
-              className="pl-10 pr-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
-            />
-            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
-          </div>
-          <div className="relative">
-            <input
-              type="date"
-              value={filterDate}
-              onChange={handleDateFilter}
-              className="pl-3 pr-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
+          <button
+            className={`px-4 py-2 rounded-lg ${dateRange === 'week' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+              }`}
+            onClick={() => setDateRange('week')}
+          >
+            This Week
+          </button>
+          <button
+            className={`px-4 py-2 rounded-lg ${dateRange === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+              }`}
+            onClick={() => setDateRange('month')}
+          >
+            This Month
+          </button>
+          <button
+            className={`px-4 py-2 rounded-lg ${dateRange === 'custom' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+              }`}
+            onClick={() => setShowDatePicker(true)}
+          >
+            Custom Range
+          </button>
         </div>
       </div>
+
+      {showDatePicker && (
+        <div className="flex space-x-4 mt-4">
+          <input
+            type="date"
+            value={customRange.start}
+            onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+            className="px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
+          />
+          <input
+            type="date"
+            value={customRange.end}
+            onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+            className="px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
+          />
+          <button
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+            onClick={() => {
+              setDateRange('custom');
+              setShowDatePicker(false);
+            }}
+          >
+            Apply
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
@@ -128,11 +154,10 @@ export default function Orders() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {orders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order.id}</td>
+            {filteredOrders.map((order) => (
+              <tr key={order._id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"># {order._id}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {/* Access the "number" field of the table object */}
                   {order.table && typeof order.table === "object" ? order.table.number : order.table}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">
@@ -140,7 +165,6 @@ export default function Orders() {
                     ? order.items.map((item) => item.name).join(', ')
                     : ''}
                 </td>
-
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   ${order.total ? order.total.toFixed(2) : 0}
                 </td>
@@ -148,7 +172,6 @@ export default function Orders() {
                   <StatusBadge status={order.status} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {/* Format the date */}
                   {new Intl.DateTimeFormat('en-US', {
                     year: 'numeric',
                     month: 'short',
