@@ -1,9 +1,16 @@
 import express from "express";
-import { createTable } from "../controllers/table.controller"; // Adjust path as needed
+import {
+  createTable,
+  getTables,
+  updateTable,
+  deleteTable,
+} from "../controllers/table.controller";
 
 const tableRouter = express.Router();
 
-// POST route to create a new table
-tableRouter.post("/table", createTable);
+tableRouter.post("/createTable", createTable);
+tableRouter.get("/getAllTables", getTables);
+tableRouter.put("/updateTable/:id", updateTable);
+tableRouter.delete("/deleteTable/:id", deleteTable);
 
 export default tableRouter;
