@@ -6,7 +6,7 @@ import { TableModel } from "../models/table.model"; // Import the Table model
 // Fetch all orders
 export const getOrders = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("Registered models:", mongoose.modelNames());
+   
 
     const orders = await OrderModel.find()
       .populate("table", "number") // Populate the 'table' field with the 'number' field from the Table schema
