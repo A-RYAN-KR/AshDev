@@ -256,7 +256,7 @@ export default function Menu() {
           </button>
           <button
             type="button"
-            onClick={() => setShowForm(false)}
+            onClick={() => setShowCategoryForm(false)}
             className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 ml-4"
           >
             Cancel
