@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit2, Trash2, X, Search } from 'lucide-react';
+import axios from 'axios';
 
 interface MenuItem {
   _id: string;
@@ -10,14 +11,19 @@ interface MenuItem {
   isAvailable: boolean;
 }
 
-const categories = ['Starters', 'Main Course', 'Desserts', 'Beverages'];
-
 export default function Menu() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [categories, setCategories] = useState([]);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [categoryFormData, setCategoryFormData] = useState({
+    categoryName: '',
+    restaurant: '',
+  });
+
 
   const initialFormState = {
     name: '',
@@ -45,6 +51,57 @@ export default function Menu() {
       .catch(error => {
         console.error('Failed to fetch menu items:', error);
         setMenuItems([]); // Fallback to empty array on error
+      });
+  }, []);
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      console.log(categoryFormData);
+      const response = await fetch('http://localhost:7000/api/v1/category', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(categoryFormData),
+      });
+
+      console.log('Response:', response);
+
+      if (!response.ok) {
+        throw new Error(`Failed to add category: ${response.statusText}`);
+      }
+
+      const newCategory = await response.json();
+
+      // Update category list with the new category
+      setCategories((prev) => [...prev, newCategory]);
+      setCategoryFormData({ categoryName: '', restaurant: '' });
+      setShowCategoryForm(false);
+    } catch (error) {
+      console.error('Error adding category:', error);
+    }
+  };
+
+  const handleCategoryInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setCategoryFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Fetch categories from the backend
+  useEffect(() => {
+    axios
+      .get('http://localhost:7000/api/v1/category')
+      .then((response) => {
+        console.log('Fetched categories:', response.data);
+        setCategories(response.data); // Assuming the response data is an array of categories
+      })
+      .catch((error) => {
+        console.error('Error fetching categories:', error);
       });
   }, []);
 
@@ -114,7 +171,6 @@ export default function Menu() {
   });
 
   // Add these functions within your component
-
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
     setFormData(item); // Pre-fill the form with the item's data
@@ -150,14 +206,63 @@ export default function Menu() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-        >
-          <PlusCircle className="w-5 h-5 mr-2" />
-          Add New Item
-        </button>
+        <div className="space-x-4 flex items-center">
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            <PlusCircle className="w-5 h-5 mr-2" />
+            Add New Item
+          </button>
+          <button
+            onClick={() => setShowCategoryForm(true)}
+            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            <PlusCircle className="w-5 h-5 mr-2" />
+            Add New Category
+          </button>
+        </div>
       </div>
+      {/* Category form */}
+      {showCategoryForm && (
+        <form onSubmit={handleAddCategory} className="space-y-4 bg-white p-4 rounded-lg shadow-md">
+          <div>
+            <label className="block text-gray-700 font-medium">Category Name</label>
+            <input
+              type="text"
+              name="categoryName"
+              value={categoryFormData.categoryName}
+              onChange={handleCategoryInputChange}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="Enter category name"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium">Restaurant Name</label>
+            <input
+              type="text"
+              name="restaurant"
+              value={categoryFormData.restaurant}
+              onChange={handleCategoryInputChange}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="Enter restaurant name"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+          >
+            Submit
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowForm(false)}
+            className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 ml-4"
+          >
+            Cancel
+          </button>
+        </form>
+      )}
 
       <div className="flex space-x-4 mb-6">
         <div className="flex-1 relative">
@@ -177,7 +282,7 @@ export default function Menu() {
         >
           <option value="">All Categories</option>
           {categories.map(category => (
-            <option key={category} value={category}>{category}</option>
+            <option key={category._id} value={category._id}>{category.categoryName}</option>
           ))}
         </select>
       </div>

@@ -9,6 +9,7 @@ import userRouter from "./routes/user.route";
 import menuRouter from "./routes/menu.route";
 import orderRouter from "./routes/order.route";
 import tableRouter from "./routes/table.route";
+import categoryRouter from "./routes/category.route";
 
 
 // body parser
@@ -26,11 +27,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 // routes
-
 app.use("/api/v1", userRouter);
 app.use("/api/v1", menuRouter);
 app.use("/api/v1", orderRouter);
 app.use("/api/v1", tableRouter);
+app.use("/api/v1", categoryRouter);
 
 // testing api
 app.get("/test", (req: Request, res: Response, next: NextFunction) => {
