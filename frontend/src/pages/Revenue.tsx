@@ -87,7 +87,7 @@ export default function Revenue() {
 
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Total Orders</h3>
+            <h3 className="text-lg font-semibold">Total Completed Orders</h3>
             <ShoppingBag className="w-6 h-6 text-purple-500" />
           </div>
           <p className="text-3xl font-bold">{totalOrders}</p>
