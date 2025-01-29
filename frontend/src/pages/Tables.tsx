@@ -94,20 +94,28 @@ export default function Tables() {
 
   const fetchTables = async () => {
     setLoading(true);
+
     try {
-      const response = await axios.get(`${API_BASE_URL}/getAllTables`);
-      const fetchedTables = response.data.data.map((table: any) => ({
+      // Make API call using axios
+      const { data } = await axios.get(`${API_BASE_URL}/getAllTables`);
+
+      // Transform the data and set state
+      const fetchedTables = data.data.map((table: any) => ({
         ...table,
         id: table._id,
       }));
+
       setTables(fetchedTables);
     } catch (error) {
+      // Error handling with clear messaging
       console.error("Error fetching tables:", error);
       toast.error("Failed to fetch tables.");
     } finally {
+      // Always set loading to false in the end
       setLoading(false);
     }
   };
+
 
   const handleAddTable = () => {
     setFormData({
@@ -127,37 +135,57 @@ export default function Tables() {
 
   const handleDelete = async (id: string) => {
     try {
+      // Perform the delete request using axios
       await axios.delete(`${API_BASE_URL}/deleteTable/${id}`);
+
+      // Update the state by filtering out the deleted table
       setTables((prev) => prev.filter((table) => table.id !== id));
+
+      // Show success notification
       toast.success("Table deleted successfully!");
     } catch (error) {
+      // Log the error and show error notification
       console.error("Error deleting table:", error);
       toast.error("Failed to delete table.");
     }
   };
 
+
   const handleReserveToggle = async (id: string) => {
     try {
+      // Find the table with the given ID
       const table = tables.find((t) => t.id === id);
-      if (table) {
-        const updatedStatus = table.status === "available" ? "reserved" : "available";
-        const response = await axios.put(`${API_BASE_URL}/updateTable/${id}`, {
-          status: updatedStatus,
-        });
-        
-        setTables((prev) =>
-          prev.map((t) => t.id === id 
-            ? { ...response.data.data, id: response.data.data._id } 
-            : t)
-        );
-        
-        toast.success(`Table status updated to ${updatedStatus}.`);
+      if (!table) {
+        // If table is not found, log an error and exit the function
+        throw new Error("Table not found");
       }
+
+      // Determine the new status for the table
+      const updatedStatus = table.status === "available" ? "reserved" : "available";
+
+      // Send PUT request to update the table status
+      const response = await axios.put(`${API_BASE_URL}/updateTable/${id}`, {
+        status: updatedStatus,
+      });
+
+      // Update state with the new table status
+      setTables((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? { ...response.data.data, id: response.data.data._id } // Update the specific table
+            : t
+        )
+      );
+
+      // Show success notification
+      toast.success(`Table status updated to ${updatedStatus}.`);
     } catch (error) {
+      // Handle errors gracefully
       console.error("Error toggling reservation:", error);
       toast.error("Failed to update table status.");
     }
   };
+
 
   const handleCloseForm = () => {
     setShowForm(false);
