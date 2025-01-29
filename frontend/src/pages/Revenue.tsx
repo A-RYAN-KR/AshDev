@@ -1,40 +1,62 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, ShoppingBag, IndianRupee } from 'lucide-react';
+import { useState, useEffect } from "react";
+import axios from "axios";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { TrendingUp, ShoppingBag, IndianRupee } from "lucide-react";
 
-// const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
+// Define months in order (Jan - Dec)
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 export default function Revenue() {
-  const [orders, setOrders] = useState<any>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
   const [averageOrderValue, setAverageOrderValue] = useState(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState<any>([]);
 
   useEffect(() => {
-    axios.get('http://localhost:7000/api/v1/orders')
-      .then(response => {
-        const orderData = response.data;
-        console.log("order :" , orderData);
-        setOrders(orderData);
+    axios.get("http://localhost:7000/api/v1/orders")
+      .then((response) => {
+        const orders = response.data;
 
-        const total = orderData.reduce((sum:any, order:any) => sum + order.total, 0);
+        // Filter only "completed" orders
+        const completedOrders = orders.filter((order: any) => order.status === "completed");
+
+        // Calculate total revenue
+        const total = completedOrders.reduce((sum: number, order: any) => sum + order.total, 0);
         setTotalRevenue(total);
-        setTotalOrders(orderData.length);
-        setAverageOrderValue(orderData.length ? (total / orderData.length).toFixed(2) : 0);
+        setTotalOrders(completedOrders.length);
+        setAverageOrderValue(completedOrders.length ? (total / completedOrders.length).toFixed(2) : 0);
 
-        // Process monthly revenue
-        const revenueByMonth : any = {};
-        orderData.forEach(order => {
-          const month = new Date(order.time).toLocaleString('default', { month: 'short' }); // Use order.time
-          revenueByMonth[month] = (revenueByMonth[month] || 0) + order.total;
+        // Prepare monthly revenue data
+        const revenueByMonth: { [key: string]: number } = {};
+        MONTHS.forEach((month) => (revenueByMonth[month] = 0)); // Initialize all months
+
+        completedOrders.forEach((order: any) => {
+          const month = new Date(order.time).toLocaleString("default", { month: "short" });
+          if (revenueByMonth[month] !== undefined) {
+            revenueByMonth[month] += order.total;
+          }
         });
 
-        const formattedMonthlyRevenue = Object.entries(revenueByMonth).map(([month, revenue]) => ({ month, revenue }));
+        // Convert to array and keep months in order
+        const formattedMonthlyRevenue = MONTHS.map((month) => ({
+          month,
+          revenue: revenueByMonth[month],
+        }));
+
         setMonthlyRevenue(formattedMonthlyRevenue);
       })
-      .catch(error => console.error('Error fetching orders:', error));
+      .catch((error) => console.error("Error fetching orders:", error));
   }, []);
 
   return (
@@ -50,7 +72,7 @@ export default function Revenue() {
             <h3 className="text-lg font-semibold">Total Revenue</h3>
             <IndianRupee className="w-6 h-6 text-green-500" />
           </div>
-          <p className="text-3xl font-bold">₹ {totalRevenue.toLocaleString('en-IN')}</p>
+          <p className="text-3xl font-bold">₹ {totalRevenue.toLocaleString("en-IN")}</p>
           <p className="text-green-500 text-sm mt-2">+12.5% from last month</p>
         </div>
 
@@ -73,46 +95,19 @@ export default function Revenue() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4">Monthly Revenue Trend</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyRevenue}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#93c5fd" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h3 className="text-lg font-semibold mb-4">Monthly Revenue Trend</h3>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={monthlyRevenue}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#93c5fd" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-
-        {/* <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4">Revenue by Category</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={dummyData.categoryRevenue}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {dummyData.categoryRevenue.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div> */}
       </div>
     </div>
   );
