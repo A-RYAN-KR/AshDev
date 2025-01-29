@@ -37,21 +37,25 @@ export default function Menu() {
 
   // Fetch menu items from the API
   useEffect(() => {
-    fetch('http://localhost:7000/api/v1/menu')
-      .then(response => response.json())
-      .then(apiResponse => {
+    const fetchMenuItems = async () => {
+      try {
+        const response = await axios.get('http://localhost:7000/api/v1/menu');
+        const apiResponse = response.data;
+
         if (Array.isArray(apiResponse.data)) {
           console.log(apiResponse.data);
           setMenuItems(apiResponse.data); // Accessing the 'data' property
         } else {
           console.error('API response data is not an array:', apiResponse);
-          setMenuItems([]);
+          setMenuItems([]); // Fallback to empty array on error
         }
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Failed to fetch menu items:', error);
         setMenuItems([]); // Fallback to empty array on error
-      });
+      }
+    };
+
+    fetchMenuItems();
   }, []);
 
   const handleAddCategory = async (e: React.FormEvent) => {
@@ -59,21 +63,20 @@ export default function Menu() {
 
     try {
       console.log(categoryFormData);
-      const response = await fetch('http://localhost:7000/api/v1/category', {
-        method: 'POST',
+
+      const response = await axios.post('http://localhost:7000/api/v1/category', categoryFormData, {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(categoryFormData),
       });
 
       console.log('Response:', response);
 
-      if (!response.ok) {
+      if (response.status !== 200) {
         throw new Error(`Failed to add category: ${response.statusText}`);
       }
 
-      const newCategory = await response.json();
+      const newCategory = response.data;
 
       // Update category list with the new category
       setCategories((prev) => [...prev, newCategory]);
@@ -94,15 +97,17 @@ export default function Menu() {
 
   // Fetch categories from the backend
   useEffect(() => {
-    axios
-      .get('http://localhost:7000/api/v1/category')
-      .then((response) => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('http://localhost:7000/api/v1/category');
         console.log('Fetched categories:', response.data);
         setCategories(response.data); // Assuming the response data is an array of categories
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error('Error fetching categories:', error);
-      });
+      }
+    };
+
+    fetchCategories();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -121,35 +126,24 @@ export default function Menu() {
     e.preventDefault();
 
     try {
+      let response;
       if (editingItem) {
         // Update existing item
-        const response = await fetch(`http://localhost:7000/api/v1/menu/${editingItem._id}`, {
-          method: 'PUT',
+        response = await axios.put(`http://localhost:7000/api/v1/menu/${editingItem._id}`, formData, {
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to update menu item: ${response.statusText}`);
-        }
-
-        const { data: updatedItem } = await response.json(); // Assuming the updated item is in `data`
+        const updatedItem = response.data; // Assuming the updated item is in `data`
         setMenuItems(prev =>
           prev.map(item => (item._id === updatedItem._id ? updatedItem : item))
         );
       } else {
         // Add a new item
-        const response = await fetch('http://localhost:7000/api/v1/menu', {
-          method: 'POST',
+        response = await axios.post('http://localhost:7000/api/v1/menu', formData, {
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to add menu item: ${response.statusText}`);
-        }
-
-        const { data: newItem } = await response.json(); // Assuming the new item is in `data`
+        const newItem = response.data; // Assuming the new item is in `data`
         setMenuItems(prev => [...prev, newItem]);
       }
 
@@ -182,19 +176,15 @@ export default function Menu() {
 
   const handleDelete = async (_id: string | undefined) => {
     console.log('Deleting item:', _id);
+
     if (!_id) {
       console.error('Cannot delete: Menu item ID is undefined.');
       return;
     }
 
     try {
-      const response = await fetch(`http://localhost:7000/api/v1/menu/${_id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete menu item: ${response.statusText}`);
-      }
+      // Send DELETE request with axios
+      await axios.delete(`http://localhost:7000/api/v1/menu/${_id}`);
 
       // Update state to remove the deleted item
       setMenuItems(prev => prev.filter(item => item._id !== _id));
