@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useEffect, useState } from 'react';
 
 interface Order {
@@ -34,15 +35,12 @@ export default function Orders() {
 
   useEffect(() => {
     const fetchOrders = async () => {
+      setLoading(true);
       try {
-        const response = await fetch('http://localhost:7000/api/v1/orders');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log(data);
-        setOrders(data);
-      } catch (error: any) {
+        const response = await axios.get("http://localhost:7000/api/v1/orders");
+        setOrders(response.data); // Assuming response.data contains the orders
+      } catch (error:any) {
+        console.error("Error fetching orders:", error);
         setError(error);
       } finally {
         setLoading(false);
@@ -52,28 +50,39 @@ export default function Orders() {
     fetchOrders();
   }, []);
 
+
   useEffect(() => {
-    let filtered = orders;
-    const now = new Date();
+    const filterOrders = () => {
+      if (!orders.length) return []; // Ensure orders exist before filtering
 
-    if (dateRange === 'week') {
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      filtered = filtered.filter(order => new Date(order.time) >= startOfWeek);
-    } else if (dateRange === 'month') {
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      filtered = filtered.filter(order => new Date(order.time) >= startOfMonth);
-    } else if (dateRange === 'custom') {
-      const startDate = new Date(customRange.start);
-      const endDate = new Date(customRange.end);
-      filtered = filtered.filter(order => {
-        const orderDate = new Date(order.time);
-        return orderDate >= startDate && orderDate <= endDate;
-      });
-    }
+      const now = new Date();
 
-    setFilteredOrders(filtered);
+      if (dateRange === "week") {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        return orders.filter(order => new Date(order.time) >= startOfWeek);
+      }
+
+      if (dateRange === "month") {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return orders.filter(order => new Date(order.time) >= startOfMonth);
+      }
+
+      if (dateRange === "custom" && customRange?.start && customRange?.end) {
+        const startDate = new Date(customRange.start);
+        const endDate = new Date(customRange.end);
+        return orders.filter(order => {
+          const orderDate = new Date(order.time);
+          return orderDate >= startDate && orderDate <= endDate;
+        });
+      }
+
+      return orders; // Default case (if no filtering applies)
+    };
+
+    setFilteredOrders(filterOrders());
   }, [dateRange, customRange, orders]);
+
 
   if (loading) {
     return <div>Loading orders...</div>;
