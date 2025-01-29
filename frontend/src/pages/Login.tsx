@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
@@ -13,55 +13,74 @@ const LoginPage: React.FC = () => {
     setIsSignUp(!isSignUp);
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignIn = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const email = (e.target as HTMLFormElement).email.value;
-    const password = (e.target as HTMLFormElement).password.value;
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
     if (!email || !password) {
-      toast.error('Please fill in all fields!');
+      toast.error("Please fill in all fields!");
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      toast.error("Please enter a valid email address!");
       return;
     }
 
     try {
-      const response = await axios.post('http://localhost:7000/api/v1/login', { email, password });
-      toast.success(response.data.message || 'Signed in successfully!');
-      setTimeout(() => {
-        navigate('/');
-      }, 1000);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'An error occurred!');
-    }
-  };
+      const { data } = await axios.post("http://localhost:7000/api/v1/login", { email, password });
 
-  const handleSignUp = async (e: React.FormEvent) => {
+      toast.success(data.message || "Signed in successfully!");
+      setTimeout(() => navigate("/"), 1000);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error(error.response?.data?.message || "An error occurred!");
+    }
+  }, [navigate]); 
+
+
+  const handleSignUp = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const name = (e.target as HTMLFormElement).name.value;
-    const email = (e.target as HTMLFormElement).email.value;
-    const password = (e.target as HTMLFormElement).password.value;
+
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
     if (!name || !email || !password) {
-      toast.error('Please fill in all fields!');
+      toast.error("Please fill in all fields!");
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      toast.error("Please enter a valid email address!");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long!");
       return;
     }
 
     try {
-      const response = await axios.post('http://localhost:7000/api/v1/registeration', {
-        name,
-        email,
-        password,
-      });
+      const { data } = await axios.post("http://localhost:7000/api/v1/registration", { name, email, password });
 
-      toast.success(response.data.message || 'Registration successful!');
-      if (response.data.activationToken) {
+      toast.success(data.message || "Registration successful!");
+
+      if (data.activationToken) {
         setTimeout(() => {
-          navigate('/otp', { state: { activationToken: response.data.activationToken } });
+          navigate("/otp", { state: { activationToken: data.activationToken } });
         }, 1000);
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'An error occurred!');
+      console.error("Sign-up error:", error);
+      toast.error(error.response?.data?.message || "An error occurred!");
     }
-  };
+  }, [navigate]);
+
 
   return (
     <div className="page-wrapper">
