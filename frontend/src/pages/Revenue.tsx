@@ -1,27 +1,42 @@
-import React from 'react';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { DollarSign, TrendingUp, ShoppingBag } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, ShoppingBag, IndianRupee } from 'lucide-react';
 
-const dummyData = {
-  monthlyRevenue: [
-    { month: 'Jan', revenue: 25000 },
-    { month: 'Feb', revenue: 32000 },
-    { month: 'Mar', revenue: 28000 },
-    { month: 'Apr', revenue: 38000 },
-    { month: 'May', revenue: 29000 },
-    { month: 'Jun', revenue: 42000 },
-  ],
-  categoryRevenue: [
-    { name: 'Main Course', value: 45 },
-    { name: 'Beverages', value: 20 },
-    { name: 'Desserts', value: 15 },
-    { name: 'Appetizers', value: 20 },
-  ],
-};
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
+// const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
 
 export default function Revenue() {
+  const [orders, setOrders] = useState<any>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [averageOrderValue, setAverageOrderValue] = useState(0);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<any>([]);
+
+  useEffect(() => {
+    axios.get('http://localhost:7000/api/v1/orders')
+      .then(response => {
+        const orderData = response.data;
+        console.log("order :" , orderData);
+        setOrders(orderData);
+
+        const total = orderData.reduce((sum:any, order:any) => sum + order.total, 0);
+        setTotalRevenue(total);
+        setTotalOrders(orderData.length);
+        setAverageOrderValue(orderData.length ? (total / orderData.length).toFixed(2) : 0);
+
+        // Process monthly revenue
+        const revenueByMonth : any = {};
+        orderData.forEach(order => {
+          const month = new Date(order.time).toLocaleString('default', { month: 'short' }); // Use order.time
+          revenueByMonth[month] = (revenueByMonth[month] || 0) + order.total;
+        });
+
+        const formattedMonthlyRevenue = Object.entries(revenueByMonth).map(([month, revenue]) => ({ month, revenue }));
+        setMonthlyRevenue(formattedMonthlyRevenue);
+      })
+      .catch(error => console.error('Error fetching orders:', error));
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -33,9 +48,9 @@ export default function Revenue() {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Total Revenue</h3>
-            <DollarSign className="w-6 h-6 text-green-500" />
+            <IndianRupee className="w-6 h-6 text-green-500" />
           </div>
-          <p className="text-3xl font-bold">$194,000</p>
+          <p className="text-3xl font-bold">₹ {totalRevenue.toLocaleString('en-IN')}</p>
           <p className="text-green-500 text-sm mt-2">+12.5% from last month</p>
         </div>
 
@@ -44,7 +59,7 @@ export default function Revenue() {
             <h3 className="text-lg font-semibold">Average Order Value</h3>
             <TrendingUp className="w-6 h-6 text-blue-500" />
           </div>
-          <p className="text-3xl font-bold">$42.50</p>
+          <p className="text-3xl font-bold">₹ {averageOrderValue}</p>
           <p className="text-blue-500 text-sm mt-2">+5.2% from last month</p>
         </div>
 
@@ -53,7 +68,7 @@ export default function Revenue() {
             <h3 className="text-lg font-semibold">Total Orders</h3>
             <ShoppingBag className="w-6 h-6 text-purple-500" />
           </div>
-          <p className="text-3xl font-bold">4,567</p>
+          <p className="text-3xl font-bold">{totalOrders}</p>
           <p className="text-purple-500 text-sm mt-2">+8.3% from last month</p>
         </div>
       </div>
@@ -63,7 +78,7 @@ export default function Revenue() {
           <h3 className="text-lg font-semibold mb-4">Monthly Revenue Trend</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dummyData.monthlyRevenue}>
+              <AreaChart data={monthlyRevenue}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -74,7 +89,7 @@ export default function Revenue() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        {/* <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold mb-4">Revenue by Category</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -97,7 +112,7 @@ export default function Revenue() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

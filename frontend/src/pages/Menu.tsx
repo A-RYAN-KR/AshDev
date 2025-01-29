@@ -173,7 +173,10 @@ export default function Menu() {
   // Add these functions within your component
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
-    setFormData(item); // Pre-fill the form with the item's data
+    setFormData({
+      ...item,
+      category: item.category // <-- Use _id here
+    });  // Pre-fill the form with the item's data
     setShowForm(true);
   };
 
@@ -382,7 +385,7 @@ export default function Menu() {
                 >
                   <option value="">Select a category</option>
                   {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
+                    <option key={category._id} value={category._id}>{category.categoryName}</option>
                   ))}
                 </select>
               </div>
