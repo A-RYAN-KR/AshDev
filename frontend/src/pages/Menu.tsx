@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit2, Trash2, X, Search } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 interface MenuItem {
   _id: string;
@@ -64,11 +65,13 @@ export default function Menu() {
     try {
       console.log(categoryFormData);
 
-      const response = await axios.post('http://localhost:7000/api/v1/category', categoryFormData, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await axios.post(
+        'http://localhost:7000/api/v1/category',
+        categoryFormData,
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
 
       console.log('Response:', response);
 
@@ -80,10 +83,20 @@ export default function Menu() {
 
       // Update category list with the new category
       setCategories((prev) => [...prev, newCategory]);
+
+      // Clear form fields
       setCategoryFormData({ categoryName: '', restaurant: '' });
+
+      // Hide form
       setShowCategoryForm(false);
+
+      // Show success toast
+      toast.success('Category has been added successfully!');
     } catch (error) {
       console.error('Error adding category:', error);
+
+      // Show error toast
+      toast.error('Failed to add category. Please try again.');
     }
   };
 
