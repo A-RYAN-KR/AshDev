@@ -19,28 +19,39 @@ export const getOrders = async (req: Request, res: Response): Promise<void> => {
 
 export const createOrder = async (req: Request, res: Response) => {
   try {
-    const { table, items } = req.body;
+    const { table, items, status } = req.body;
 
     // Validate request body
     if (!table || !items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: "Missing or invalid required fields." });
+      return res
+        .status(400)
+        .json({ message: "Missing or invalid required fields." });
     }
 
     // Fetch menu items to calculate total
     const menuItems = await MenuItemModel.find({ _id: { $in: items } });
 
     if (menuItems.length !== items.length) {
-      return res.status(400).json({ message: "One or more items are invalid." });
+      return res
+        .status(400)
+        .json({ message: "One or more items are invalid." });
     }
 
     // Calculate total price
     const total = menuItems.reduce((sum, item) => sum + item.price, 0);
+
+    // Ensure status is set, default to "pending" if not provided
+    const orderStatus =
+      status && ["pending", "completed", "cancelled"].includes(status)
+        ? status
+        : "pending";
 
     // Create a new order
     const newOrder = new OrderModel({
       table: new mongoose.Types.ObjectId(table),
       items: items.map((item: string) => new mongoose.Types.ObjectId(item)),
       total,
+      status: orderStatus, // Assign status here
     });
 
     // Save the order to the database
