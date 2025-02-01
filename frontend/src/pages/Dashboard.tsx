@@ -112,7 +112,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Total Revenue"
-          value={`$${aggregatedData.totalRevenue}`}
+          value={`₹ ${aggregatedData.totalRevenue}`}
           icon={DollarSign}
           color="bg-green-500"
         />

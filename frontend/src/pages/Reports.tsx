@@ -190,9 +190,9 @@ const Reports = () => {
     // Add summary data.
     const summaryData = [
       ['Summary Statistics'],
-      ['Total Sales', `$${stats.totalSales.toLocaleString()}`],
+      ['Total Sales', `₹ ${stats.totalSales.toLocaleString()}`],
       ['Total Orders', stats.totalOrders.toString()],
-      ['Average Order Value', `$${stats.averageOrderValue.toFixed(2)}`],
+      ['Average Order Value', `₹ ${stats.averageOrderValue.toFixed(2)}`],
     ];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
@@ -366,7 +366,7 @@ const Reports = () => {
               Total Sales
             </h3>
             <p className="text-3xl font-bold text-blue-600">
-              ${stats.totalSales.toLocaleString(undefined, {
+              ₹ {stats.totalSales.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}
@@ -385,7 +385,7 @@ const Reports = () => {
               Average Order Value
             </h3>
             <p className="text-3xl font-bold text-purple-600">
-              ${stats.averageOrderValue.toLocaleString(undefined, {
+              ₹ {stats.averageOrderValue.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}
