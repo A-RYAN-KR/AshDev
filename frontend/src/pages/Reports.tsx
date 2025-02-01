@@ -158,13 +158,13 @@ const Reports = () => {
     
     // Add summary statistics.
     doc.text('Summary Statistics:', 14, 42);
-    doc.text(`Total Sales: $${stats.totalSales.toLocaleString()}`, 20, 52);
+    doc.text(`Total Sales: ₹${stats.totalSales.toLocaleString()}`, 20, 52);
     doc.text(`Total Orders: ${stats.totalOrders}`, 20, 62);
-    doc.text(`Average Order Value: $${stats.averageOrderValue.toFixed(2)}`, 20, 72);
+    doc.text(`Average Order Value: ₹${stats.averageOrderValue.toFixed(2)}`, 20, 72);
     
     // Add sales data table.
     autoTable(doc, {
-      head: [['Date', 'Sales ($)', 'Orders']],
+      head: [['Date', 'Sales (₹)', 'Orders']],
       body: orders.map(row => [
         row.displayDate, // Always show the formatted date.
         row.sales.toFixed(2),
