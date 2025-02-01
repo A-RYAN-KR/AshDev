@@ -39,6 +39,7 @@ export default function Orders() {
       try {
         const response = await axios.get("http://localhost:7000/api/v1/orders");
         setOrders(response.data); // Assuming response.data contains the orders
+        console.log("Orders fetched:", response.data);
       } catch (error:any) {
         console.error("Error fetching orders:", error);
         setError(error);

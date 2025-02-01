@@ -1,124 +1,61 @@
-import React, { useState, useMemo } from 'react';
-import { BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useState, useMemo, useEffect } from 'react';
+import { format } from 'date-fns';
+import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Users, DollarSign, ShoppingBag, Utensils, TrendingUp, Calendar } from 'lucide-react';
-
-// Extended dummy data for different time ranges
-const allData = {
-  daily: {
-    revenue: [
-      { date: '2024-03-07', revenue: 3600, orders: 55, customers: 150 },
-    ],
-    stats: {
-      totalOrders: 55,
-      totalRevenue: 3600,
-      activeCustomers: 38,
-      occupiedTables: 8,
-    },
-    hourlyTraffic: [
-      { hour: '08:00', customers: 20 },
-      { hour: '10:00', customers: 45 },
-      { hour: '12:00', customers: 85 },
-      { hour: '14:00', customers: 65 },
-      { hour: '16:00', customers: 40 },
-      { hour: '18:00', customers: 70 },
-      { hour: '20:00', customers: 90 },
-      { hour: '22:00', customers: 50 },
-    ],
-  },
-  weekly: {
-    revenue: [
-      { date: '2024-03-01', revenue: 2500, orders: 45, customers: 120 },
-      { date: '2024-03-02', revenue: 3200, orders: 52, customers: 145 },
-      { date: '2024-03-03', revenue: 2800, orders: 48, customers: 135 },
-      { date: '2024-03-04', revenue: 3800, orders: 60, customers: 160 },
-      { date: '2024-03-05', revenue: 2900, orders: 50, customers: 140 },
-      { date: '2024-03-06', revenue: 4200, orders: 65, customers: 180 },
-      { date: '2024-03-07', revenue: 3600, orders: 55, customers: 150 },
-    ],
-    stats: {
-      totalOrders: 375,
-      totalRevenue: 23000,
-      activeCustomers: 150,
-      occupiedTables: 12,
-    },
-    hourlyTraffic: [
-      { hour: '08:00', customers: 25 },
-      { hour: '10:00', customers: 55 },
-      { hour: '12:00', customers: 95 },
-      { hour: '14:00', customers: 75 },
-      { hour: '16:00', customers: 50 },
-      { hour: '18:00', customers: 80 },
-      { hour: '20:00', customers: 100 },
-      { hour: '22:00', customers: 60 },
-    ],
-  },
-  monthly: {
-    revenue: [
-      { date: '2024-02-01', revenue: 32000, orders: 520, customers: 1400 },
-      { date: '2024-02-08', revenue: 35000, orders: 580, customers: 1600 },
-      { date: '2024-02-15', revenue: 38000, orders: 610, customers: 1700 },
-      { date: '2024-02-22', revenue: 36000, orders: 590, customers: 1650 },
-      { date: '2024-02-29', revenue: 42000, orders: 650, customers: 1800 },
-      { date: '2024-03-07', revenue: 45000, orders: 680, customers: 1900 },
-    ],
-    stats: {
-      totalOrders: 3630,
-      totalRevenue: 228000,
-      activeCustomers: 450,
-      occupiedTables: 24,
-    },
-    hourlyTraffic: [
-      { hour: '08:00', customers: 35 },
-      { hour: '10:00', customers: 65 },
-      { hour: '12:00', customers: 110 },
-      { hour: '14:00', customers: 85 },
-      { hour: '16:00', customers: 60 },
-      { hour: '18:00', customers: 95 },
-      { hour: '20:00', customers: 115 },
-      { hour: '22:00', customers: 70 },
-    ],
-  },
-};
-
-const categoryRevenue = [
-  { name: 'Main Course', value: 45, revenue: 5600 },
-  { name: 'Beverages', value: 20, revenue: 2400 },
-  { name: 'Desserts', value: 15, revenue: 1800 },
-  { name: 'Appetizers', value: 20, revenue: 2200 },
-];
+import axios from 'axios';
+import StatCard from '../components/StatCard';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
 
-const StatCard = ({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: any; color: string }) => (
-  <div className="bg-white rounded-lg p-6 shadow-md">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-gray-500 text-sm">{title}</p>
-        <p className="text-2xl font-semibold mt-1">{value}</p>
-      </div>
-      <div className={`p-3 rounded-full ${color}`}>
-        <Icon className="w-6 h-6 text-white" />
-      </div>
-    </div>
-  </div>
-);
 
 export default function Dashboard() {
-  const [timeRange, setTimeRange] = useState<'day' | 'week' | 'month'>('week');
+  const [orders, setOrders] = useState([]);
+  const [timeRange, setTimeRange] = useState('week');
 
-  // Get the appropriate data based on the selected time range
-  const currentData = useMemo(() => {
-    switch (timeRange) {
-      case 'day':
-        return allData.daily;
-      case 'week':
-        return allData.weekly;
-      case 'month':
-        return allData.monthly;
-      default:
-        return allData.weekly;
-    }
-  }, [timeRange]);
+  useEffect(() => {
+    axios.get('http://localhost:7000/api/v1/orders')
+      .then(response => setOrders(response.data))
+      .catch(error => console.error("Error fetching orders:", error));
+  }, []);
+
+  const aggregatedData = useMemo(() => {
+    const filteredOrders = orders.filter(order => {
+      const orderDate = new Date(order.time);
+      const now = new Date();
+      if (timeRange === 'day') return orderDate.toDateString() === now.toDateString();
+      if (timeRange === 'week') return (now - orderDate) / (1000 * 60 * 60 * 24) <= 7;
+      return (now - orderDate) / (1000 * 60 * 60 * 24) <= 30;
+    });
+
+    const revenue = filteredOrders.reduce((acc, order) => acc + order.total, 0);
+    const ordersCount = filteredOrders.length;
+    const activeCustomers = new Set(filteredOrders.map(order => order.table)).size;
+
+    return {
+      totalOrders: ordersCount,
+      totalRevenue: revenue,
+      activeCustomers,
+      ordersRevenueData: filteredOrders.map(order => ({ date: order.time, orders: 1, revenue: order.total }))
+    };
+  }, [orders, timeRange]);
+
+  const getHourlyTrafficData = () => {
+    const hourlyTraffic = new Array(24).fill(0);
+
+    orders.forEach(order => {
+      const orderDate = new Date(order.time);
+      const hour = orderDate.getHours();
+      hourlyTraffic[hour] += 1;
+    });
+
+    return hourlyTraffic.map((count, index) => ({
+      hour: `${index}:00`,
+      customers: count
+    }));
+  };
+
+  const hourlyTrafficData = useMemo(() => getHourlyTrafficData(), [orders]);
+
 
   return (
     <div className="space-y-6">
@@ -169,28 +106,28 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Orders"
-          value={currentData.stats.totalOrders.toLocaleString()}
+          value={aggregatedData.totalOrders}
           icon={ShoppingBag}
           color="bg-blue-500"
         />
         <StatCard
           title="Total Revenue"
-          value={`$${currentData.stats.totalRevenue.toLocaleString()}`}
+          value={`$${aggregatedData.totalRevenue}`}
           icon={DollarSign}
           color="bg-green-500"
         />
         <StatCard
           title="Active Customers"
-          value={currentData.stats.activeCustomers.toLocaleString()}
+          value={aggregatedData.activeCustomers}
           icon={Users}
           color="bg-purple-500"
         />
-        <StatCard
+        {/* <StatCard
           title="Occupied Tables"
           value={currentData.stats.occupiedTables}
           icon={Utensils}
           color="bg-orange-500"
-        />
+        /> */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -202,9 +139,9 @@ export default function Dashboard() {
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={currentData.revenue}>
+              <LineChart data={orders.map(order => ({ date: order.time, revenue: order.total }))}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
+                <XAxis dataKey="date" tickFormatter={(date) => format(new Date(date), 'yyyy-MM-dd')} />
                 <YAxis />
                 <Tooltip />
                 <Legend />
@@ -221,35 +158,38 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Orders vs Customers Area Chart */}
+        {/* Orders vs Revenue Area Chart */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Orders vs Customers</h2>
+            <h2 className="text-lg font-semibold">Orders vs Revenue</h2>
             <Users className="w-5 h-5 text-purple-500" />
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={currentData.revenue}>
+              <AreaChart data={aggregatedData.ordersRevenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
+                <XAxis dataKey="date" tickFormatter={(date) => format(new Date(date), 'yyyy-MM-dd')} />
+                <YAxis yAxisId="left" orientation="left" domain={[0, 10]} />
+                <YAxis yAxisId="right" orientation="right" />
                 <Tooltip />
                 <Legend />
-                <Area 
-                  type="monotone" 
-                  dataKey="orders" 
-                  stackId="1" 
-                  stroke="#10b981" 
-                  fill="#10b981" 
-                  fillOpacity={0.3} 
+                <Area
+                  type="monotone"
+                  dataKey="orders"
+                  name="Orders"
+                  stroke="#10b981"
+                  fill="#10b981"
+                  fillOpacity={0.3}
+                  yAxisId="left"
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="customers" 
-                  stackId="2" 
-                  stroke="#6366f1" 
-                  fill="#6366f1" 
-                  fillOpacity={0.3} 
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  name="Revenue ($)"
+                  stroke="#6366f1"
+                  fill="#6366f1"
+                  fillOpacity={0.3}
+                  yAxisId="right"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -264,18 +204,18 @@ export default function Dashboard() {
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={currentData.hourlyTraffic}>
+              <LineChart data={hourlyTrafficData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="hour" />
                 <YAxis />
                 <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="customers" 
+                <Line
+                  type="monotone"
+                  dataKey="customers"
                   name="Customers"
-                  stroke="#f59e0b" 
-                  strokeWidth={2} 
-                  dot={true} 
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  dot={true}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -283,7 +223,7 @@ export default function Dashboard() {
         </div>
 
         {/* Category Distribution Pie Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        {/* <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Revenue by Category</h2>
             <DollarSign className="w-5 h-5 text-green-500" />
@@ -310,7 +250,7 @@ export default function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
