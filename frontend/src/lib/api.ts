@@ -1,3 +1,4 @@
+import axios from "axios";
 const API_BASE_URL = '/api';
 
 export async function login(username: string, password: string) {
@@ -69,3 +70,48 @@ export async function deleteMenuItem(id: string) {
   });
   if (!response.ok) throw new Error('Failed to delete menu item');
 }
+
+
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+export async function fetchMonthlyRevenue() {
+  try {
+    const response = await axios.get(`http://localhost:7000/api/v1/orders`);
+    const orders = response.data;
+
+    // Filter only "completed" orders
+    const completedOrders = orders.filter((order: any) => order.status === "completed");
+
+    // Calculate total revenue
+    const totalRevenue = completedOrders.reduce((sum: number, order: any) => sum + order.total, 0);
+    const totalOrders = completedOrders.length;
+    const averageOrderValue = totalOrders ? (totalRevenue / totalOrders).toFixed(2) : 0;
+
+    // Prepare monthly revenue data
+    const revenueByMonth: { [key: string]: number } = {};
+    MONTHS.forEach((month) => (revenueByMonth[month] = 0)); // Initialize all months
+
+    completedOrders.forEach((order: any) => {
+      const month = new Date(order.time).toLocaleString("default", { month: "short" });
+      if (revenueByMonth[month] !== undefined) {
+        revenueByMonth[month] += order.total;
+      }
+    });
+
+    // Convert to array and keep months in order
+    const monthlyRevenue = MONTHS.map((month) => ({
+      month,
+      revenue: revenueByMonth[month],
+    }));
+
+    return { totalRevenue, totalOrders, averageOrderValue, monthlyRevenue };
+  } catch (error) {
+    console.error("Error fetching revenue data:", error);
+    throw new Error("Failed to fetch revenue data");
+  }
+}
+

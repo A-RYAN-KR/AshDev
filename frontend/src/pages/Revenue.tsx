@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { fetchMonthlyRevenue } from "../lib/api.ts"; // Import API function
 import {
   AreaChart,
   Area,
@@ -11,12 +11,6 @@ import {
 } from "recharts";
 import { TrendingUp, ShoppingBag, IndianRupee } from "lucide-react";
 
-// Define months in order (Jan - Dec)
-const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
 export default function Revenue() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -24,39 +18,14 @@ export default function Revenue() {
   const [monthlyRevenue, setMonthlyRevenue] = useState<any>([]);
 
   useEffect(() => {
-    axios.get("http://localhost:7000/api/v1/orders")
-      .then((response) => {
-        const orders = response.data;
-
-        // Filter only "completed" orders
-        const completedOrders = orders.filter((order: any) => order.status === "completed");
-
-        // Calculate total revenue
-        const total = completedOrders.reduce((sum: number, order: any) => sum + order.total, 0);
-        setTotalRevenue(total);
-        setTotalOrders(completedOrders.length);
-        setAverageOrderValue(completedOrders.length ? (total / completedOrders.length).toFixed(2) : 0);
-
-        // Prepare monthly revenue data
-        const revenueByMonth: { [key: string]: number } = {};
-        MONTHS.forEach((month) => (revenueByMonth[month] = 0)); // Initialize all months
-
-        completedOrders.forEach((order: any) => {
-          const month = new Date(order.time).toLocaleString("default", { month: "short" });
-          if (revenueByMonth[month] !== undefined) {
-            revenueByMonth[month] += order.total;
-          }
-        });
-
-        // Convert to array and keep months in order
-        const formattedMonthlyRevenue = MONTHS.map((month) => ({
-          month,
-          revenue: revenueByMonth[month],
-        }));
-
-        setMonthlyRevenue(formattedMonthlyRevenue);
+    fetchMonthlyRevenue()
+      .then(({ totalRevenue, totalOrders, averageOrderValue, monthlyRevenue }) => {
+        setTotalRevenue(totalRevenue);
+        setTotalOrders(totalOrders);
+        setAverageOrderValue(averageOrderValue);
+        setMonthlyRevenue(monthlyRevenue);
       })
-      .catch((error) => console.error("Error fetching orders:", error));
+      .catch((error) => console.error(error));
   }, []);
 
   return (

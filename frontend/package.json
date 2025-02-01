@@ -12,6 +12,10 @@
   "dependencies": {
     "@tanstack/react-query": "^5.24.1",
     "axios": "^1.7.9",
+<<<<<<< HEAD
+=======
+    "data-fns": "^1.1.0",
+>>>>>>> 015e9d894a1580d1d16261a75de68345753690e4
     "date-fns": "^4.1.0",
     "framer-motion": "^10.16.4",
     "jspdf": "^2.5.1",

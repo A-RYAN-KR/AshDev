@@ -1,44 +1,135 @@
-import React, { useState } from 'react';
-import { Calendar, Download, Filter, FileSpreadsheet, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import jsPDF from 'jspdf';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, eachDayOfInterval, eachMonthOfInterval } from 'date-fns';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
-const dummyReportData = {
-  dailySales: [
-    { date: '2024-03-01', sales: 2500, orders: 45 },
-    { date: '2024-03-02', sales: 3200, orders: 52 },
-    { date: '2024-03-03', sales: 2800, orders: 48 },
-    { date: '2024-03-04', sales: 3800, orders: 60 },
-    { date: '2024-03-05', sales: 2900, orders: 50 },
-    { date: '2024-03-06', sales: 4200, orders: 65 },
-    { date: '2024-03-07', sales: 3600, orders: 55 },
-  ],
-  monthlySales: [
-    { date: '2024-02-01', sales: 32000, orders: 520 },
-    { date: '2024-02-08', sales: 35000, orders: 580 },
-    { date: '2024-02-15', sales: 38000, orders: 610 },
-    { date: '2024-02-22', sales: 36000, orders: 590 },
-    { date: '2024-02-29', sales: 42000, orders: 650 },
-  ],
-};
-
-export default function Reports() {
+const Reports = () => {
   const [dateRange, setDateRange] = useState('week');
   const [showFormatDropdown, setShowFormatDropdown] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [selectedFilters, setSelectedFilters] = useState({
-    category: 'all',
-    orderType: 'all',
-    minAmount: '',
-    maxAmount: '',
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    totalSales: 0,
+    totalOrders: 0,
+    averageOrderValue: 0
   });
 
-  const displayData = dateRange === 'month' ? dummyReportData.monthlySales : dummyReportData.dailySales;
+  useEffect(() => {
+    const today = new Date();
+    
+    if (dateRange === 'week') {
+      setStartDate(format(startOfWeek(today), 'yyyy-MM-dd'));
+      setEndDate(format(endOfWeek(today), 'yyyy-MM-dd'));
+    } else if (dateRange === 'month') {
+      setStartDate(format(startOfMonth(today), 'yyyy-MM-dd'));
+      setEndDate(format(endOfMonth(today), 'yyyy-MM-dd'));
+    }
+  }, [dateRange]);
+
+  const generateDateRange = (start, end) => {
+    if (dateRange === 'month') {
+      const months = eachMonthOfInterval({
+        start: parseISO(start),
+        end: parseISO(end)
+      });
+      
+      return months.map(date => ({
+        date: format(date, 'yyyy-MM'),
+        displayDate: format(date, 'MMMM yyyy'),
+        sales: 0,
+        orders: 0
+      }));
+    } else {
+      const days = eachDayOfInterval({
+        start: parseISO(start),
+        end: parseISO(end)
+      });
+      
+      return days.map(date => ({
+        date: format(date, 'yyyy-MM-dd'),
+        displayDate: format(date, 'MMM dd, yyyy'),
+        sales: 0,
+        orders: 0
+      }));
+    }
+  };
+
+  const processOrdersData = (orders) => {
+    const dateRange = generateDateRange(startDate, endDate);
+    
+    const groupedOrders = orders.reduce((acc, order) => {
+      const date = dateRange === 'month' 
+        ? format(new Date(order.time), 'yyyy-MM')
+        : format(new Date(order.time), 'yyyy-MM-dd');
+      
+      if (!acc[date]) {
+        acc[date] = { date, sales: 0, orders: 0 };
+      }
+      acc[date].sales += order.total;
+      acc[date].orders += 1;
+      return acc;
+    }, {});
+
+    return dateRange.map(dateObj => ({
+      ...dateObj,
+      ...(groupedOrders[dateObj.date] || {})
+    }));
+  };
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('http://localhost:7000/api/v1/orders');
+      if (!response.ok) throw new Error('Failed to fetch orders');
+
+      const ordersData = await response.json();
+      
+      const filteredOrders = ordersData.filter(order => {
+        if (order.status !== 'completed') return false;
+        
+        const orderDate = parseISO(order.time);
+        const start = parseISO(startDate);
+        const end = parseISO(endDate);
+        
+        return orderDate >= start && orderDate <= end;
+      });
+
+      const processedOrders = processOrdersData(filteredOrders);
+      setOrders(processedOrders);
+      calculateStats(filteredOrders);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching orders:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateStats = (orders) => {
+    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
+    const totalOrders = orders.length;
+    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+
+    setStats({
+      totalSales,
+      totalOrders,
+      averageOrderValue
+    });
+  };
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      fetchOrders();
+    }
+  }, [startDate, endDate]);
 
   const downloadPDF = () => {
     const doc = new jsPDF();
@@ -53,15 +144,15 @@ export default function Reports() {
     
     // Add summary statistics
     doc.text('Summary Statistics:', 14, 42);
-    doc.text(`Total Sales: $23,000`, 20, 52);
-    doc.text(`Total Orders: 375`, 20, 62);
-    doc.text(`Average Order Value: $61.33`, 20, 72);
+    doc.text(`Total Sales: $${stats.totalSales.toLocaleString()}`, 20, 52);
+    doc.text(`Total Orders: ${stats.totalOrders}`, 20, 62);
+    doc.text(`Average Order Value: $${stats.averageOrderValue.toFixed(2)}`, 20, 72);
     
     // Add sales data table
     autoTable(doc, {
       head: [['Date', 'Sales ($)', 'Orders']],
-      body: displayData.map(row => [
-        row.date,
+      body: orders.map(row => [
+        row.displayDate,
         row.sales.toFixed(2),
         row.orders
       ]),
@@ -72,16 +163,20 @@ export default function Reports() {
   };
 
   const downloadExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(displayData);
+    const worksheet = XLSX.utils.json_to_sheet(orders.map(row => ({
+      Date: row.displayDate,
+      Sales: row.sales,
+      Orders: row.orders
+    })));
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Data');
     
     // Add summary data
     const summaryData = [
       ['Summary Statistics'],
-      ['Total Sales', '$23,000'],
-      ['Total Orders', '375'],
-      ['Average Order Value', '$61.33'],
+      ['Total Sales', `$${stats.totalSales.toLocaleString()}`],
+      ['Total Orders', stats.totalOrders.toString()],
+      ['Average Order Value', `$${stats.averageOrderValue.toFixed(2)}`],
     ];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
@@ -89,226 +184,154 @@ export default function Reports() {
     XLSX.writeFile(workbook, 'sales-report.xlsx');
   };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setSelectedFilters(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  }
 
-  const applyDateRange = () => {
-    if (startDate && endDate) {
-      setDateRange('custom');
-      setShowDatePicker(false);
-    }
-  };
+  if (error) {
+    return <div className="text-red-500">Error: {error}</div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="text-gray-500">Generate and download custom reports</p>
+          <h1 className="text-2xl font-bold text-gray-900">Sales Dashboard</h1>
+          <p className="text-gray-500">
+            {dateRange === 'month' ? 'Monthly' : dateRange === 'week' ? 'Weekly' : 'Custom'} Sales Analysis
+          </p>
         </div>
         <div className="relative">
           <button
             onClick={() => setShowFormatDropdown(!showFormatDropdown)}
-            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
             <Download className="w-5 h-5 mr-2" />
-            Download Report
+            Export Report
           </button>
           {showFormatDropdown && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
-              <button
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10 border border-gray-200">
+              <button 
                 onClick={() => {
                   downloadPDF();
                   setShowFormatDropdown(false);
-                }}
-                className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-t-lg"
+                }} 
+                className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors"
               >
                 <FileText className="w-5 h-5 mr-2" />
-                Download as PDF
+                Download PDF
               </button>
-              <button
+              <button 
                 onClick={() => {
                   downloadExcel();
                   setShowFormatDropdown(false);
-                }}
-                className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-b-lg"
+                }} 
+                className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-b-lg border-t border-gray-100 transition-colors"
               >
                 <FileSpreadsheet className="w-5 h-5 mr-2" />
-                Download as Excel
+                Download Excel
               </button>
             </div>
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="flex mb-6 bg-gray-50 p-4 rounded-lg">
           <div className="flex space-x-4">
             <button
-              className={`px-4 py-2 rounded-lg ${
-                dateRange === 'week' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+              className={`px-6 py-2 rounded-lg transition-colors ${
+                dateRange === 'week' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'
               }`}
               onClick={() => setDateRange('week')}
             >
-              This Week
+              Week
             </button>
             <button
-              className={`px-4 py-2 rounded-lg ${
-                dateRange === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+              className={`px-6 py-2 rounded-lg transition-colors ${
+                dateRange === 'month' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'
               }`}
               onClick={() => setDateRange('month')}
             >
-              This Month
+              Month
             </button>
-            <button
-              className={`px-4 py-2 rounded-lg ${
-                dateRange === 'custom' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
-              onClick={() => setShowDatePicker(true)}
-            >
-              Custom Range
-            </button>
-          </div>
-          <div className="flex space-x-4">
-            <button
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex items-center px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50"
-            >
-              <Calendar className="w-5 h-5 mr-2" />
-              Select Dates
-            </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50"
-            >
-              <Filter className="w-5 h-5 mr-2" />
-              Filters
-            </button>
+            <div className={`flex items-center space-x-4 ${dateRange === 'custom' ? 'bg-blue-50 px-4 rounded-lg' : ''}`}>
+              <button
+                className={`px-6 py-2 rounded-lg transition-colors ${
+                  dateRange === 'custom' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'
+                }`}
+                onClick={() => setDateRange('custom')}
+              >
+                Custom
+              </button>
+              {dateRange === 'custom' && (
+                <div className="flex space-x-4">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                  />
+                  <span className="text-gray-500">to</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {showDatePicker && (
-          <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-            <div className="flex space-x-4 items-end">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <button
-                onClick={applyDateRange}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        )}
-
-        {showFilters && (
-          <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  name="category"
-                  value={selectedFilters.category}
-                  onChange={handleFilterChange}
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="all">All Categories</option>
-                  <option value="food">Food</option>
-                  <option value="beverages">Beverages</option>
-                  <option value="desserts">Desserts</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
-                <select
-                  name="orderType"
-                  value={selectedFilters.orderType}
-                  onChange={handleFilterChange}
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="all">All Orders</option>
-                  <option value="dine-in">Dine-in</option>
-                  <option value="takeaway">Takeaway</option>
-                  <option value="delivery">Delivery</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Min Amount</label>
-                <input
-                  type="number"
-                  name="minAmount"
-                  value={selectedFilters.minAmount}
-                  onChange={handleFilterChange}
-                  placeholder="0"
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Amount</label>
-                <input
-                  type="number"
-                  name="maxAmount"
-                  value={selectedFilters.maxAmount}
-                  onChange={handleFilterChange}
-                  placeholder="1000"
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="h-80 mb-6">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={displayData}>
+            <BarChart data={orders} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+              <XAxis 
+                dataKey="displayDate"
+                angle={-45}
+                textAnchor="end"
+                height={70}
+                interval={0}
+                tick={{ fontSize: 12 }}
+              />
               <YAxis yAxisId="left" orientation="left" stroke="#3b82f6" />
               <YAxis yAxisId="right" orientation="right" stroke="#10b981" />
-              <Tooltip />
-              <Bar yAxisId="left" dataKey="sales" fill="#3b82f6" name="Sales ($)" />
-              <Bar yAxisId="right" dataKey="orders" fill="#10b981" name="Orders" />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+              />
+              <Bar yAxisId="left" dataKey="sales" fill="#3b82f6" name="Sales ($)" radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="right" dataKey="orders" fill="#10b981" name="Orders" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Total Sales</h3>
-            <p className="text-2xl font-bold text-blue-500">$23,000</p>
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl">
+            <h3 className="text-lg font-semibold mb-2 text-blue-900">Total Sales</h3>
+            <p className="text-3xl font-bold text-blue-600">
+              ${stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
           </div>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Total Orders</h3>
-            <p className="text-2xl font-bold text-green-500">375</p>
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl">
+            <h3 className="text-lg font-semibold mb-2 text-green-900">Total Orders</h3>
+            <p className="text-3xl font-bold text-green-600">
+              {stats.totalOrders.toLocaleString()}
+            </p>
           </div>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Average Order Value</h3>
-            <p className="text-2xl font-bold text-purple-500">$61.33</p>
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl">
+            <h3 className="text-lg font-semibold mb-2 text-purple-900">Average Order Value</h3>
+            <p className="text-3xl font-bold text-purple-600">
+              ${stats.averageOrderValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default Reports;
