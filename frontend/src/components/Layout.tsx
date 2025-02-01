@@ -1,19 +1,18 @@
-import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  ClipboardList, 
-  DollarSign, 
+  ClipboardList,
   Table, 
   Menu, 
   FileText, 
-  LogOut 
+  LogOut, 
+  IndianRupee
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/orders', icon: ClipboardList, label: 'Orders' },
-  { path: '/revenue', icon: DollarSign, label: 'Revenue' },
+  { path: '/revenue', icon: IndianRupee, label: 'Revenue' },
   { path: '/tables', icon: Table, label: 'Tables' },
   { path: '/menu', icon: Menu, label: 'Menu' },
   { path: '/reports', icon: FileText, label: 'Reports' },

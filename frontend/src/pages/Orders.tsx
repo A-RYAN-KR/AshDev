@@ -40,7 +40,7 @@ export default function Orders() {
         const response = await axios.get("http://localhost:7000/api/v1/orders");
         setOrders(response.data); // Assuming response.data contains the orders
         console.log("Orders fetched:", response.data);
-      } catch (error:any) {
+      } catch (error: any) {
         console.error("Error fetching orders:", error);
         setError(error);
       } finally {
@@ -176,7 +176,7 @@ export default function Orders() {
                     : ''}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  ${order.total ? order.total.toFixed(2) : 0}
+                  {order.total ? order.total.toFixed(2) : 0}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <StatusBadge status={order.status} />

@@ -192,7 +192,7 @@ export default function Dashboard() {
                 <Line
                   type="monotone"
                   dataKey="revenue"
-                  name="Revenue ($)"
+                  name="Revenue (₹)"
                   stroke="#3b82f6"
                   strokeWidth={2}
                   dot={timeRange !== 'week'}
@@ -229,7 +229,7 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  name="Revenue ($)"
+                  name="Revenue (₹)"
                   stroke="#6366f1"
                   fill="#6366f1"
                   fillOpacity={0.3}
