@@ -1,16 +1,14 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { OrderModel } from "../models/order.model"; // Import the Order model
-import { TableModel } from "../models/table.model"; // Import the Table model
+import { OrderModel } from "../models/order.model";
+import { MenuItemModel } from "../models/menu.model";
 
 // Fetch all orders
 export const getOrders = async (req: Request, res: Response): Promise<void> => {
   try {
-   
-
     const orders = await OrderModel.find()
-      .populate("table", "number") // Populate the 'table' field with the 'number' field from the Table schema
-      .populate("items", "name price category"); // Populate the 'items' field with 'name' and 'price' fields from the MenuItem schema
+      .populate("table", "number")
+      .populate("items", "name price category");
 
     res.status(200).json(orders);
   } catch (error) {
@@ -19,15 +17,24 @@ export const getOrders = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-
 export const createOrder = async (req: Request, res: Response) => {
   try {
-    const { table, items, total } = req.body;
+    const { table, items } = req.body;
 
     // Validate request body
-    if (!table || !items || !total) {
-      return res.status(400).json({ message: "Missing required fields." });
+    if (!table || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Missing or invalid required fields." });
     }
+
+    // Fetch menu items to calculate total
+    const menuItems = await MenuItemModel.find({ _id: { $in: items } });
+
+    if (menuItems.length !== items.length) {
+      return res.status(400).json({ message: "One or more items are invalid." });
+    }
+
+    // Calculate total price
+    const total = menuItems.reduce((sum, item) => sum + item.price, 0);
 
     // Create a new order
     const newOrder = new OrderModel({
@@ -48,4 +55,3 @@ export const createOrder = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Internal server error." });
   }
 };
-
