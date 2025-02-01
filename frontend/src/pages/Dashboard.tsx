@@ -1,31 +1,47 @@
 import { useState, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
-import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 import { Users, ShoppingBag, Utensils, TrendingUp, Calendar, IndianRupee } from 'lucide-react';
 import axios from 'axios';
 import StatCard from '../components/StatCard';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
 
-
 export default function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [timeRange, setTimeRange] = useState('week');
 
   useEffect(() => {
-    axios.get('http://localhost:7000/api/v1/orders')
+    axios
+      .get('http://localhost:7000/api/v1/orders')
       .then(response => {
         console.log("response.data :", response.data);
-        setOrders(response.data)
+        setOrders(response.data);
       })
       .catch(error => console.error("Error fetching orders:", error));
     console.log("orders :", orders);
   }, []);
 
   const aggregatedData = useMemo(() => {
+    // Only include orders with a "completed" status and within the specified time range
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.time);
       const now = new Date();
+      if (order.status !== 'completed') return false;
       if (timeRange === 'day') return orderDate.toDateString() === now.toDateString();
       if (timeRange === 'week') return (now - orderDate) / (1000 * 60 * 60 * 24) <= 7;
       return (now - orderDate) / (1000 * 60 * 60 * 24) <= 30;
@@ -39,15 +55,20 @@ export default function Dashboard() {
       totalOrders: ordersCount,
       totalRevenue: revenue,
       activeCustomers,
-      ordersRevenueData: filteredOrders.map(order => ({ date: order.time, orders: 1, revenue: order.total }))
+      ordersRevenueData: filteredOrders.map(order => ({
+        date: order.time,
+        orders: 1,
+        revenue: order.total,
+      })),
     };
   }, [orders, timeRange]);
 
   const categoryData = useMemo(() => {
     const categoryCounts = {};
-    let totalItems = 0;  // Track total items for percentage calculation
+    let totalItems = 0; // Track total items for percentage calculation
 
     orders.forEach(order => {
+      // Regardless of order status, count categories (or filter if needed)
       order.items.forEach(item => {
         categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
         totalItems++;
@@ -57,11 +78,10 @@ export default function Dashboard() {
     return Object.entries(categoryCounts).map(([category, count], index) => ({
       name: category,
       value: count,
-      percentage: ((count / totalItems) * 100).toFixed(1),  // Convert to percentage
-      color: COLORS[index % COLORS.length]
+      percentage: ((count / totalItems) * 100).toFixed(1), // Convert to percentage
+      color: COLORS[index % COLORS.length],
     }));
   }, [orders]);
-
 
   const getHourlyTrafficData = () => {
     const hourlyTraffic = new Array(24).fill(0);
@@ -74,12 +94,11 @@ export default function Dashboard() {
 
     return hourlyTraffic.map((count, index) => ({
       hour: `${index}:00`,
-      customers: count
+      customers: count,
     }));
   };
 
   const hourlyTrafficData = useMemo(() => getHourlyTrafficData(), [orders]);
-
 
   return (
     <div className="space-y-6">
@@ -97,28 +116,31 @@ export default function Dashboard() {
       <div className="flex space-x-4 mb-6">
         <button
           onClick={() => setTimeRange('day')}
-          className={`px-4 py-2 rounded-lg transition-colors ${timeRange === 'day'
+          className={`px-4 py-2 rounded-lg transition-colors ${
+            timeRange === 'day'
               ? 'bg-blue-500 text-white'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
+          }`}
         >
           Today
         </button>
         <button
           onClick={() => setTimeRange('week')}
-          className={`px-4 py-2 rounded-lg transition-colors ${timeRange === 'week'
+          className={`px-4 py-2 rounded-lg transition-colors ${
+            timeRange === 'week'
               ? 'bg-blue-500 text-white'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
+          }`}
         >
           This Week
         </button>
         <button
           onClick={() => setTimeRange('month')}
-          className={`px-4 py-2 rounded-lg transition-colors ${timeRange === 'month'
+          className={`px-4 py-2 rounded-lg transition-colors ${
+            timeRange === 'month'
               ? 'bg-blue-500 text-white'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
+          }`}
         >
           This Month
         </button>
@@ -143,6 +165,7 @@ export default function Dashboard() {
           icon={Users}
           color="bg-purple-500"
         />
+        {/* Uncomment if needed */}
         {/* <StatCard
           title="Occupied Tables"
           value={currentData.stats.occupiedTables}
@@ -160,7 +183,7 @@ export default function Dashboard() {
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={orders.map(order => ({ date: order.time, revenue: order.total }))}>
+              <LineChart data={aggregatedData.ordersRevenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tickFormatter={(date) => format(new Date(date), 'yyyy-MM-dd')} />
                 <YAxis />
@@ -258,7 +281,7 @@ export default function Dashboard() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`} // Show category + percentage
+                  label={({ name, percentage }) => `${name}: ${percentage}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
