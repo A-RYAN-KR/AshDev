@@ -10,7 +10,7 @@ export const getOrders = async (req: Request, res: Response): Promise<void> => {
 
     const orders = await OrderModel.find()
       .populate("table", "number") // Populate the 'table' field with the 'number' field from the Table schema
-      .populate("items", "name price"); // Populate the 'items' field with 'name' and 'price' fields from the MenuItem schema
+      .populate("items", "name price category"); // Populate the 'items' field with 'name' and 'price' fields from the MenuItem schema
 
     res.status(200).json(orders);
   } catch (error) {
