@@ -346,7 +346,7 @@ const Reports = () => {
                 yAxisId="left"
                 dataKey="sales"
                 fill="#3b82f6"
-                name="Sales ($)"
+                name="Sales (₹)"
                 radius={[4, 4, 0, 0]}
               />
               <Bar
