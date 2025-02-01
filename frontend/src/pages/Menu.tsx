@@ -128,22 +128,21 @@ export default function Menu() {
     try {
       let response;
       if (editingItem) {
-        // Update existing item
         response = await axios.put(`http://localhost:7000/api/v1/menu/${editingItem._id}`, formData, {
           headers: { 'Content-Type': 'application/json' },
         });
 
-        const updatedItem = response.data; // Assuming the updated item is in `data`
+        const updatedItem = response.data.data; // Ensure API response contains updated data
         setMenuItems(prev =>
           prev.map(item => (item._id === updatedItem._id ? updatedItem : item))
         );
       } else {
-        // Add a new item
+        console.log('Creating new menu item:', formData);
         response = await axios.post('http://localhost:7000/api/v1/menu', formData, {
           headers: { 'Content-Type': 'application/json' },
         });
 
-        const newItem = response.data; // Assuming the new item is in `data`
+        const newItem = response.data.data; // Ensure response has correct structure
         setMenuItems(prev => [...prev, newItem]);
       }
 
@@ -153,6 +152,7 @@ export default function Menu() {
     }
   };
 
+
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingItem(null);
@@ -161,8 +161,18 @@ export default function Menu() {
 
   const filteredItems = menuItems.filter(item => {
     const itemName = item?.name || ''; // Safely handle missing 'name' property
-    return itemName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = itemName.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Ensure we match categories correctly
+    const matchesCategory = selectedCategory
+      ? item.category === selectedCategory ||
+      categories.find(cat => cat.categoryName === item.category && cat._id === selectedCategory)
+      : true;
+
+    return matchesSearch && matchesCategory;
   });
+
+
 
   // Add these functions within your component
   const handleEdit = (item: MenuItem) => {
@@ -312,7 +322,7 @@ export default function Menu() {
             </div>
             <p className="text-gray-600 mb-4">{item.description}</p>
             <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold">${Number(item.price).toFixed(2)}</span>
+              <span className="text-lg font-semibold">₹ {Number(item.price).toFixed(2)}</span>
               <span className={`px-3 py-1 rounded-full text-sm ${item.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                 }`}>
                 {item.isAvailable ? 'Available' : 'Unavailable'}
@@ -375,7 +385,7 @@ export default function Menu() {
                 >
                   <option value="">Select a category</option>
                   {categories.map(category => (
-                    <option key={category._id} value={category._id}>{category.categoryName}</option>
+                    <option key={category._id} value={category.categoryName}>{category.categoryName}</option>
                   ))}
                 </select>
               </div>

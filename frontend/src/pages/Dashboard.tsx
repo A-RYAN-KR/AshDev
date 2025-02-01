@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Users, DollarSign, ShoppingBag, Utensils, TrendingUp, Calendar } from 'lucide-react';
+import { Users, ShoppingBag, Utensils, TrendingUp, Calendar, IndianRupee } from 'lucide-react';
 import axios from 'axios';
 import StatCard from '../components/StatCard';
 
@@ -14,8 +14,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     axios.get('http://localhost:7000/api/v1/orders')
-      .then(response => setOrders(response.data))
+      .then(response => {
+        console.log("response.data :", response.data);
+        setOrders(response.data)
+      })
       .catch(error => console.error("Error fetching orders:", error));
+    console.log("orders :", orders);
   }, []);
 
   const aggregatedData = useMemo(() => {
@@ -38,6 +42,26 @@ export default function Dashboard() {
       ordersRevenueData: filteredOrders.map(order => ({ date: order.time, orders: 1, revenue: order.total }))
     };
   }, [orders, timeRange]);
+
+  const categoryData = useMemo(() => {
+    const categoryCounts = {};
+    let totalItems = 0;  // Track total items for percentage calculation
+
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+        totalItems++;
+      });
+    });
+
+    return Object.entries(categoryCounts).map(([category, count], index) => ({
+      name: category,
+      value: count,
+      percentage: ((count / totalItems) * 100).toFixed(1),  // Convert to percentage
+      color: COLORS[index % COLORS.length]
+    }));
+  }, [orders]);
+
 
   const getHourlyTrafficData = () => {
     const hourlyTraffic = new Array(24).fill(0);
@@ -62,10 +86,10 @@ export default function Dashboard() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
         <p className="text-gray-500">
-          {timeRange === 'day' 
-            ? "Today's performance" 
-            : timeRange === 'week' 
-              ? "This week's performance" 
+          {timeRange === 'day'
+            ? "Today's performance"
+            : timeRange === 'week'
+              ? "This week's performance"
               : "This month's performance"}
         </p>
       </div>
@@ -73,31 +97,28 @@ export default function Dashboard() {
       <div className="flex space-x-4 mb-6">
         <button
           onClick={() => setTimeRange('day')}
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            timeRange === 'day' 
-              ? 'bg-blue-500 text-white' 
+          className={`px-4 py-2 rounded-lg transition-colors ${timeRange === 'day'
+              ? 'bg-blue-500 text-white'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+            }`}
         >
           Today
         </button>
         <button
           onClick={() => setTimeRange('week')}
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            timeRange === 'week' 
-              ? 'bg-blue-500 text-white' 
+          className={`px-4 py-2 rounded-lg transition-colors ${timeRange === 'week'
+              ? 'bg-blue-500 text-white'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+            }`}
         >
           This Week
         </button>
         <button
           onClick={() => setTimeRange('month')}
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            timeRange === 'month' 
-              ? 'bg-blue-500 text-white' 
+          className={`px-4 py-2 rounded-lg transition-colors ${timeRange === 'month'
+              ? 'bg-blue-500 text-white'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+            }`}
         >
           This Month
         </button>
@@ -112,8 +133,8 @@ export default function Dashboard() {
         />
         <StatCard
           title="Total Revenue"
-          value={`$${aggregatedData.totalRevenue}`}
-          icon={DollarSign}
+          value={`₹ ${aggregatedData.totalRevenue}`}
+          icon={IndianRupee}
           color="bg-green-500"
         />
         <StatCard
@@ -145,13 +166,13 @@ export default function Dashboard() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
                   name="Revenue ($)"
-                  stroke="#3b82f6" 
-                  strokeWidth={2} 
-                  dot={timeRange !== 'week'} 
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  dot={timeRange !== 'week'}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -209,10 +230,11 @@ export default function Dashboard() {
                 <XAxis dataKey="hour" />
                 <YAxis />
                 <Tooltip />
+                <Legend />
                 <Line
                   type="monotone"
                   dataKey="customers"
-                  name="Customers"
+                  name="Orders"
                   stroke="#f59e0b"
                   strokeWidth={2}
                   dot={true}
@@ -223,34 +245,34 @@ export default function Dashboard() {
         </div>
 
         {/* Category Distribution Pie Chart */}
-        {/* <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Revenue by Category</h2>
-            <DollarSign className="w-5 h-5 text-green-500" />
+            <IndianRupee className="w-5 h-5 text-green-500" />
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={categoryRevenue}
+                  data={categoryData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percentage }) => `${name}: ${percentage}%`} // Show category + percentage
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {categoryRevenue.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value, name, props) => `${props.payload.percentage}%`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div> */}
+        </div>
       </div>
     </div>
   );
