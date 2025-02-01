@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit2, Trash2, X, Search } from 'lucide-react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface MenuItem {
   _id: string;
@@ -25,6 +26,10 @@ export default function Menu() {
     restaurant: '',
   });
 
+  const initialCategoryState = {
+    categoryName: '',
+    restaurant: '',
+  }
 
   const initialFormState = {
     name: '',
@@ -65,17 +70,17 @@ export default function Menu() {
     try {
       console.log(categoryFormData);
 
-      const response = await axios.post(
-        'http://localhost:7000/api/v1/category',
-        categoryFormData,
-        {
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      const response = await axios.post('http://localhost:7000/api/v1/category', categoryFormData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       console.log('Response:', response);
 
-      if (response.status !== 200) {
+      if (response.status === 200 || response.status === 201) {
+        toast.success('Category added successfully!'); 
+      } else {
         throw new Error(`Failed to add category: ${response.statusText}`);
       }
 
@@ -83,20 +88,11 @@ export default function Menu() {
 
       // Update category list with the new category
       setCategories((prev) => [...prev, newCategory]);
-
-      // Clear form fields
       setCategoryFormData({ categoryName: '', restaurant: '' });
-
-      // Hide form
       setShowCategoryForm(false);
-
-      // Show success toast
-      toast.success('Category has been added successfully!');
     } catch (error) {
       console.error('Error adding category:', error);
-
-      // Show error toast
-      toast.error('Failed to add category. Please try again.');
+      toast.error('Failed to add category');
     }
   };
 
@@ -170,6 +166,7 @@ export default function Menu() {
     setShowForm(false);
     setEditingItem(null);
     setFormData(initialFormState);
+    setCategoryFormData(initialCategoryState);
   };
 
   const filteredItems = menuItems.filter(item => {
@@ -218,6 +215,7 @@ export default function Menu() {
 
   return (
     <div className="space-y-6">
+      <ToastContainer />
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
