@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, eachDayOfInterval, eachMonthOfInterval } from 'date-fns';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+} from 'recharts';
+import { 
+  format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, 
+  eachDayOfInterval, eachMonthOfInterval 
+} from 'date-fns';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 const Reports = () => {
-  const [dateRange, setDateRange] = useState('week');
+  const [dateRange, setDateRange] = useState('week'); // 'week', 'month', or 'custom'
   const [showFormatDropdown, setShowFormatDropdown] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -20,37 +25,43 @@ const Reports = () => {
     averageOrderValue: 0
   });
 
+  // Update startDate and endDate based on dateRange selection.
   useEffect(() => {
     const today = new Date();
-    
     if (dateRange === 'week') {
-      setStartDate(format(startOfWeek(today), 'yyyy-MM-dd'));
-      setEndDate(format(endOfWeek(today), 'yyyy-MM-dd'));
+      // Using Monday as the first day of the week
+      setStartDate(format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'));
+      setEndDate(format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'));
     } else if (dateRange === 'month') {
-      setStartDate(format(startOfMonth(today), 'yyyy-MM-dd'));
-      setEndDate(format(endOfMonth(today), 'yyyy-MM-dd'));
+      // For month mode, cover the entire current year.
+      const startYear = new Date(today.getFullYear(), 0, 1);
+      const endYear = new Date(today.getFullYear(), 11, 31);
+      setStartDate(format(startYear, 'yyyy-MM-dd'));
+      setEndDate(format(endYear, 'yyyy-MM-dd'));
     }
+    // For custom, the user will select the dates.
   }, [dateRange]);
 
+  // Generate a date range for grouping orders.
+  // For month mode, generate buckets per month; for week and custom, generate buckets per day.
   const generateDateRange = (start, end) => {
     if (dateRange === 'month') {
       const months = eachMonthOfInterval({
         start: parseISO(start),
         end: parseISO(end)
       });
-      
       return months.map(date => ({
         date: format(date, 'yyyy-MM'),
-        displayDate: format(date, 'MMMM yyyy'),
+        displayDate: format(date, 'MMMM'), // e.g. "January"
         sales: 0,
         orders: 0
       }));
     } else {
+      // For week and custom, generate a list of days.
       const days = eachDayOfInterval({
         start: parseISO(start),
         end: parseISO(end)
       });
-      
       return days.map(date => ({
         date: format(date, 'yyyy-MM-dd'),
         displayDate: format(date, 'MMM dd, yyyy'),
@@ -60,28 +71,30 @@ const Reports = () => {
     }
   };
 
-  const processOrdersData = (orders) => {
-    const dateRange = generateDateRange(startDate, endDate);
-    
-    const groupedOrders = orders.reduce((acc, order) => {
-      const date = dateRange === 'month' 
-        ? format(new Date(order.time), 'yyyy-MM')
-        : format(new Date(order.time), 'yyyy-MM-dd');
-      
-      if (!acc[date]) {
-        acc[date] = { date, sales: 0, orders: 0 };
+  // Process the fetched orders into the generated date buckets.
+  const processOrdersData = (ordersData) => {
+    const range = generateDateRange(startDate, endDate);
+    // Group orders by date key: for months, use "yyyy-MM"; for days, use "yyyy-MM-dd"
+    const groupedOrders = ordersData.reduce((acc, order) => {
+      const orderDate = new Date(order.time);
+      const key = dateRange === 'month' 
+        ? format(orderDate, 'yyyy-MM') 
+        : format(orderDate, 'yyyy-MM-dd');
+      if (!acc[key]) {
+        acc[key] = { date: key, sales: 0, orders: 0 };
       }
-      acc[date].sales += order.total;
-      acc[date].orders += 1;
+      acc[key].sales += order.total;
+      acc[key].orders += 1;
       return acc;
     }, {});
 
-    return dateRange.map(dateObj => ({
-      ...dateObj,
-      ...(groupedOrders[dateObj.date] || {})
+    return range.map(bucket => ({
+      ...bucket,
+      ...groupedOrders[bucket.date] // merge with any data that exists
     }));
   };
 
+  // Fetch orders from API and filter by date range & completed status.
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -94,16 +107,17 @@ const Reports = () => {
       
       const filteredOrders = ordersData.filter(order => {
         if (order.status !== 'completed') return false;
-        
         const orderDate = parseISO(order.time);
         const start = parseISO(startDate);
-        const end = parseISO(endDate);
-        
+        // Adjust the end date to include the entire day.
+        const endParsed = parseISO(endDate);
+        const end = new Date(endParsed);
+        end.setHours(23, 59, 59, 999);
         return orderDate >= start && orderDate <= end;
       });
 
-      const processedOrders = processOrdersData(filteredOrders);
-      setOrders(processedOrders);
+      const processed = processOrdersData(filteredOrders);
+      setOrders(processed);
       calculateStats(filteredOrders);
     } catch (err) {
       setError(err.message);
@@ -113,18 +127,14 @@ const Reports = () => {
     }
   };
 
-  const calculateStats = (orders) => {
-    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
-    const totalOrders = orders.length;
+  const calculateStats = (ordersData) => {
+    const totalSales = ordersData.reduce((sum, order) => sum + order.total, 0);
+    const totalOrders = ordersData.length;
     const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
-
-    setStats({
-      totalSales,
-      totalOrders,
-      averageOrderValue
-    });
+    setStats({ totalSales, totalOrders, averageOrderValue });
   };
 
+  // Trigger fetch whenever startDate or endDate changes.
   useEffect(() => {
     if (startDate && endDate) {
       fetchOrders();
@@ -134,25 +144,29 @@ const Reports = () => {
   const downloadPDF = () => {
     const doc = new jsPDF();
     
-    // Add title
+    // Add title.
     doc.setFontSize(20);
     doc.text('Sales Report', 14, 22);
     
-    // Add date range
+    // Add date range info.
     doc.setFontSize(12);
-    doc.text(`Date Range: ${dateRange.charAt(0).toUpperCase() + dateRange.slice(1)}ly Report`, 14, 32);
+    doc.text(
+      `Date Range: ${dateRange.charAt(0).toUpperCase() + dateRange.slice(1)}ly Report`,
+      14,
+      32
+    );
     
-    // Add summary statistics
+    // Add summary statistics.
     doc.text('Summary Statistics:', 14, 42);
     doc.text(`Total Sales: $${stats.totalSales.toLocaleString()}`, 20, 52);
     doc.text(`Total Orders: ${stats.totalOrders}`, 20, 62);
     doc.text(`Average Order Value: $${stats.averageOrderValue.toFixed(2)}`, 20, 72);
     
-    // Add sales data table
+    // Add sales data table.
     autoTable(doc, {
       head: [['Date', 'Sales ($)', 'Orders']],
       body: orders.map(row => [
-        row.displayDate,
+        row.displayDate, // Always show the formatted date.
         row.sales.toFixed(2),
         row.orders
       ]),
@@ -163,15 +177,17 @@ const Reports = () => {
   };
 
   const downloadExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(orders.map(row => ({
-      Date: row.displayDate,
-      Sales: row.sales,
-      Orders: row.orders
-    })));
+    const worksheet = XLSX.utils.json_to_sheet(
+      orders.map(row => ({
+        Date: row.displayDate,
+        Sales: row.sales,
+        Orders: row.orders
+      }))
+    );
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Data');
     
-    // Add summary data
+    // Add summary data.
     const summaryData = [
       ['Summary Statistics'],
       ['Total Sales', `$${stats.totalSales.toLocaleString()}`],
@@ -198,7 +214,12 @@ const Reports = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Sales Dashboard</h1>
           <p className="text-gray-500">
-            {dateRange === 'month' ? 'Monthly' : dateRange === 'week' ? 'Weekly' : 'Custom'} Sales Analysis
+            {dateRange === 'month'
+              ? 'Monthly'
+              : dateRange === 'week'
+              ? 'Weekly'
+              : 'Custom'}{' '}
+            Sales Analysis
           </p>
         </div>
         <div className="relative">
@@ -241,7 +262,9 @@ const Reports = () => {
           <div className="flex space-x-4">
             <button
               className={`px-6 py-2 rounded-lg transition-colors ${
-                dateRange === 'week' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'
+                dateRange === 'week'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-gray-100'
               }`}
               onClick={() => setDateRange('week')}
             >
@@ -249,16 +272,24 @@ const Reports = () => {
             </button>
             <button
               className={`px-6 py-2 rounded-lg transition-colors ${
-                dateRange === 'month' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'
+                dateRange === 'month'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-gray-100'
               }`}
               onClick={() => setDateRange('month')}
             >
               Month
             </button>
-            <div className={`flex items-center space-x-4 ${dateRange === 'custom' ? 'bg-blue-50 px-4 rounded-lg' : ''}`}>
+            <div
+              className={`flex items-center space-x-4 ${
+                dateRange === 'custom' ? 'bg-blue-50 px-4 rounded-lg' : ''
+              }`}
+            >
               <button
                 className={`px-6 py-2 rounded-lg transition-colors ${
-                  dateRange === 'custom' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'
+                  dateRange === 'custom'
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : 'bg-white text-gray-600 hover:bg-gray-100'
                 }`}
                 onClick={() => setDateRange('custom')}
               >
@@ -287,45 +318,77 @@ const Reports = () => {
 
         <div className="h-80 mb-6">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={orders} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart
+              data={orders}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
+              {/* Always include the XAxis but hide its ticks in custom mode */}
+              <XAxis
                 dataKey="displayDate"
                 angle={-45}
                 textAnchor="end"
                 height={70}
                 interval={0}
-                tick={{ fontSize: 12 }}
+                tick={dateRange === 'custom' ? false : { fontSize: 12 }}
               />
               <YAxis yAxisId="left" orientation="left" stroke="#3b82f6" />
               <YAxis yAxisId="right" orientation="right" stroke="#10b981" />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb'
+                }}
                 cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
               />
-              <Bar yAxisId="left" dataKey="sales" fill="#3b82f6" name="Sales ($)" radius={[4, 4, 0, 0]} />
-              <Bar yAxisId="right" dataKey="orders" fill="#10b981" name="Orders" radius={[4, 4, 0, 0]} />
+              <Bar
+                yAxisId="left"
+                dataKey="sales"
+                fill="#3b82f6"
+                name="Sales ($)"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                yAxisId="right"
+                dataKey="orders"
+                fill="#10b981"
+                name="Orders"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl">
-            <h3 className="text-lg font-semibold mb-2 text-blue-900">Total Sales</h3>
+            <h3 className="text-lg font-semibold mb-2 text-blue-900">
+              Total Sales
+            </h3>
             <p className="text-3xl font-bold text-blue-600">
-              ${stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${stats.totalSales.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}
             </p>
           </div>
           <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl">
-            <h3 className="text-lg font-semibold mb-2 text-green-900">Total Orders</h3>
+            <h3 className="text-lg font-semibold mb-2 text-green-900">
+              Total Orders
+            </h3>
             <p className="text-3xl font-bold text-green-600">
               {stats.totalOrders.toLocaleString()}
             </p>
           </div>
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl">
-            <h3 className="text-lg font-semibold mb-2 text-purple-900">Average Order Value</h3>
+            <h3 className="text-lg font-semibold mb-2 text-purple-900">
+              Average Order Value
+            </h3>
             <p className="text-3xl font-bold text-purple-600">
-              ${stats.averageOrderValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${stats.averageOrderValue.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}
             </p>
           </div>
         </div>
