@@ -18,6 +18,7 @@ import {
 import { Users, ShoppingBag, Utensils, TrendingUp, Calendar, IndianRupee } from 'lucide-react';
 import axios from 'axios';
 import StatCard from '../components/StatCard';
+import { SparklesCore } from '../components/sparkles';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
 
@@ -37,7 +38,6 @@ export default function Dashboard() {
   }, []);
 
   const aggregatedData = useMemo(() => {
-    // Only include orders with a "completed" status and within the specified time range
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.time);
       const now = new Date();
@@ -65,10 +65,9 @@ export default function Dashboard() {
 
   const categoryData = useMemo(() => {
     const categoryCounts = {};
-    let totalItems = 0; // Track total items for percentage calculation
+    let totalItems = 0;
 
     orders.forEach(order => {
-      // Regardless of order status, count categories (or filter if needed)
       order.items.forEach(item => {
         categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
         totalItems++;
@@ -78,7 +77,7 @@ export default function Dashboard() {
     return Object.entries(categoryCounts).map(([category, count], index) => ({
       name: category,
       value: count,
-      percentage: ((count / totalItems) * 100).toFixed(1), // Convert to percentage
+      percentage: ((count / totalItems) * 100).toFixed(1),
       color: COLORS[index % COLORS.length],
     }));
   }, [orders]);
@@ -101,45 +100,42 @@ export default function Dashboard() {
   const hourlyTrafficData = useMemo(() => getHourlyTrafficData(), [orders]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-        <p className="text-gray-500">
-          {timeRange === 'day'
-            ? "Today's performance"
-            : timeRange === 'week'
-              ? "This week's performance"
-              : "This month's performance"}
-        </p>
-      </div>
+    <div className="space-y-6 p-6 bg-gray-50">
+      <div className="relative text-center py-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg mb-8">
+  <h1 className="relative z-10 text-5xl font-bold text-white mb-3 font-serif">
+    Terracotta
+  </h1>
+  <SparklesCore className="absolute inset-0 z-0" particleColor="#ffffff" particleDensity={100} maxSize={2}/>
+</div>
 
-      <div className="flex space-x-4 mb-6">
+
+      <div className="flex justify-center space-x-4 mb-8">
         <button
           onClick={() => setTimeRange('day')}
-          className={`px-4 py-2 rounded-lg transition-colors ${
+          className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${
             timeRange === 'day'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-blue-500 text-white shadow-lg'
+              : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
           }`}
         >
           Today
         </button>
         <button
           onClick={() => setTimeRange('week')}
-          className={`px-4 py-2 rounded-lg transition-colors ${
+          className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${
             timeRange === 'week'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-blue-500 text-white shadow-lg'
+              : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
           }`}
         >
           This Week
         </button>
         <button
           onClick={() => setTimeRange('month')}
-          className={`px-4 py-2 rounded-lg transition-colors ${
+          className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${
             timeRange === 'month'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-blue-500 text-white shadow-lg'
+              : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
           }`}
         >
           This Month
@@ -165,28 +161,31 @@ export default function Dashboard() {
           icon={Users}
           color="bg-purple-500"
         />
-        {/* Uncomment if needed */}
-        {/* <StatCard
-          title="Occupied Tables"
-          value={currentData.stats.occupiedTables}
-          icon={Utensils}
+        <StatCard
+          title="Average Order Value"
+          value={`₹ ${aggregatedData.totalOrders ? Math.round(aggregatedData.totalRevenue / aggregatedData.totalOrders) : 0}`}
+          icon={TrendingUp}
           color="bg-orange-500"
-        /> */}
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Revenue Trend Line Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Revenue Trend</h2>
-            <TrendingUp className="w-5 h-5 text-blue-500" />
+        <div className="bg-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">Revenue Trend</h2>
+            <TrendingUp className="w-6 h-6 text-blue-500" />
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={aggregatedData.ordersRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={(date) => format(new Date(date), 'yyyy-MM-dd')} />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={(date) => format(new Date(date), 'MMM dd')}
+                  stroke="#666"
+                />
+                <YAxis stroke="#666" />
                 <Tooltip />
                 <Legend />
                 <Line
@@ -196,6 +195,7 @@ export default function Dashboard() {
                   stroke="#3b82f6"
                   strokeWidth={2}
                   dot={timeRange !== 'week'}
+                  activeDot={{ r: 8 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -203,18 +203,22 @@ export default function Dashboard() {
         </div>
 
         {/* Orders vs Revenue Area Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Orders vs Revenue</h2>
-            <Users className="w-5 h-5 text-purple-500" />
+        <div className="bg-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">Orders vs Revenue</h2>
+            <Users className="w-6 h-6 text-purple-500" />
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={aggregatedData.ordersRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={(date) => format(new Date(date), 'yyyy-MM-dd')} />
-                <YAxis yAxisId="left" orientation="left" domain={[0, 10]} />
-                <YAxis yAxisId="right" orientation="right" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={(date) => format(new Date(date), 'MMM dd')}
+                  stroke="#666"
+                />
+                <YAxis yAxisId="left" orientation="left" stroke="#666" />
+                <YAxis yAxisId="right" orientation="right" stroke="#666" />
                 <Tooltip />
                 <Legend />
                 <Area
@@ -240,18 +244,22 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Hourly Traffic Line Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Hourly Traffic</h2>
-            <Calendar className="w-5 h-5 text-orange-500" />
+        {/* Hourly Traffic Line Chart - Expanded */}
+        <div className="bg-white p-6 rounded-xl shadow-lg lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">Hourly Traffic Distribution</h2>
+            <Calendar className="w-6 h-6 text-orange-500" />
           </div>
-          <div className="h-80">
+          <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={hourlyTrafficData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="hour" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="hour"
+                  stroke="#666"
+                  tickFormatter={(hour) => hour.split(':')[0]}
+                />
+                <YAxis stroke="#666" />
                 <Tooltip />
                 <Legend />
                 <Line
@@ -261,42 +269,42 @@ export default function Dashboard() {
                   stroke="#f59e0b"
                   strokeWidth={2}
                   dot={true}
+                  activeDot={{ r: 8 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Category Distribution Pie Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Revenue by Category</h2>
-            <IndianRupee className="w-5 h-5 text-green-500" />
-          </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value, name, props) => `${props.payload.percentage}%`} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+   {/* Category Distribution Pie Chart - Expanded */}
+<div className="bg-white p-6 rounded-xl shadow-lg lg:col-span-2">
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-xl font-semibold text-gray-800">Revenue Distribution by Category</h2>
+    <IndianRupee className="w-6 h-6 text-green-500" />
+  </div>
+  <div className="h-96">
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={categoryData}
+          cx="50%"
+          cy="50%"
+          labelLine={true}
+          label={({ name, percentage }) => `${name}: ${percentage}%`}
+          outerRadius={({chartWidth, chartHeight}) => Math.min(chartWidth, chartHeight) / 3}
+          fill="#8884d8"
+          dataKey="value"
+        >
+          {categoryData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color} />
+          ))}
+        </Pie>
+        <Tooltip formatter={(value, name, props) => `${props.payload.percentage}%`} />
+      </PieChart>
+    </ResponsiveContainer>
+  </div>
+</div>
+</div>
     </div>
   );
 }
