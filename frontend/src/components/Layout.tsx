@@ -46,6 +46,8 @@ export default function Layout() {
           <button
             onClick={() => {
               navigate('/login');
+              localStorage.removeItem('userId');
+              localStorage.removeItem('restaurantId');
             }}
             className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-gray-50"
           >

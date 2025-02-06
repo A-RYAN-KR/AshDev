@@ -32,7 +32,8 @@ const LoginPage: React.FC = () => {
 
     try {
       const { data } = await axios.post("http://localhost:7000/api/v1/login", { email, password });
-
+      const userId = data.user._id;
+      localStorage.setItem("userId" , JSON.stringify(userId));
       toast.success(data.message || "Signed in successfully!");
       setTimeout(() => navigate("/"), 1000);
     } catch (error: any) {

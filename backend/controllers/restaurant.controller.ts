@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Restaurant from "../models/restaurant.model";
 import userModel from "../models/user.model";
+import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 // Create a new restaurant
@@ -122,5 +123,36 @@ export const deleteRestaurant = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ message: "Error deleting restaurant", error: error.message });
+  }
+};
+
+// Get all restaurants where the logged-in user is an owner
+export const getMyRestaurants = async (req: Request, res: Response) => {
+  try {
+    const userId = req.headers.authorization?.split(" ")[1]; // Extract token from "Bearer <token>"
+
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ message: "Invalid token or user not found" });
+    }
+
+    // Fetch restaurants owned by this user
+    const restaurants = await Restaurant.find({ owners: userId }).populate(
+      "owners",
+      "name email"
+    );
+
+    if (!restaurants.length) {
+      return res
+        .status(404)
+        .json({ message: "No restaurants found for this user" });
+    }
+
+    res.status(200).json(restaurants);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching restaurants", error: error.message });
   }
 };

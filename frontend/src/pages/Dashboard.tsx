@@ -25,6 +25,31 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
 export default function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [timeRange, setTimeRange] = useState('week');
+  const [restaurants, setRestaurants] = useState<any>('');
+
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const token = localStorage.getItem("userId");
+        if (!token) {
+          console.log("User not logged in");
+          return;
+        }
+
+        const response = await axios.get("http://localhost:7000/api/v1/my-restaurants", {
+          headers: { Authorization: `Bearer ${JSON.parse(token)}` }, // Send token in headers
+        });
+
+        localStorage.setItem("restaurantId", JSON.stringify(response.data[0]._id));
+        setRestaurants(response.data[0]);
+
+      } catch (err: any) {
+        console.log(err.response?.data?.message || "Error fetching restaurants");
+      }
+    };
+
+    fetchRestaurants();
+  }, []);
 
   useEffect(() => {
     axios
@@ -103,7 +128,7 @@ export default function Dashboard() {
     <div className="space-y-6 p-6 bg-gray-50">
       <div className="relative text-center py-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg mb-8">
         <h1 className="relative z-10 text-5xl font-bold text-white mb-3 font-serif">
-          Terracotta
+          {restaurants.name}
         </h1>
         <SparklesCore className="absolute inset-0 z-0" particleColor="#ffffff" particleDensity={100} maxSize={2} />
       </div>
@@ -113,8 +138,8 @@ export default function Dashboard() {
         <button
           onClick={() => setTimeRange('day')}
           className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${timeRange === 'day'
-              ? 'bg-blue-500 text-white shadow-lg'
-              : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
+            ? 'bg-blue-500 text-white shadow-lg'
+            : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
             }`}
         >
           Today
@@ -122,8 +147,8 @@ export default function Dashboard() {
         <button
           onClick={() => setTimeRange('week')}
           className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${timeRange === 'week'
-              ? 'bg-blue-500 text-white shadow-lg'
-              : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
+            ? 'bg-blue-500 text-white shadow-lg'
+            : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
             }`}
         >
           This Week
@@ -131,8 +156,8 @@ export default function Dashboard() {
         <button
           onClick={() => setTimeRange('month')}
           className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${timeRange === 'month'
-              ? 'bg-blue-500 text-white shadow-lg'
-              : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
+            ? 'bg-blue-500 text-white shadow-lg'
+            : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
             }`}
         >
           This Month
