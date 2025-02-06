@@ -102,41 +102,38 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 p-6 bg-gray-50">
       <div className="relative text-center py-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg mb-8">
-  <h1 className="relative z-10 text-5xl font-bold text-white mb-3 font-serif">
-    Terracotta
-  </h1>
-  <SparklesCore className="absolute inset-0 z-0" particleColor="#ffffff" particleDensity={100} maxSize={2}/>
-</div>
+        <h1 className="relative z-10 text-5xl font-bold text-white mb-3 font-serif">
+          Terracotta
+        </h1>
+        <SparklesCore className="absolute inset-0 z-0" particleColor="#ffffff" particleDensity={100} maxSize={2} />
+      </div>
 
 
       <div className="flex justify-center space-x-4 mb-8">
         <button
           onClick={() => setTimeRange('day')}
-          className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${
-            timeRange === 'day'
+          className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${timeRange === 'day'
               ? 'bg-blue-500 text-white shadow-lg'
               : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
-          }`}
+            }`}
         >
           Today
         </button>
         <button
           onClick={() => setTimeRange('week')}
-          className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${
-            timeRange === 'week'
+          className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${timeRange === 'week'
               ? 'bg-blue-500 text-white shadow-lg'
               : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
-          }`}
+            }`}
         >
           This Week
         </button>
         <button
           onClick={() => setTimeRange('month')}
-          className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${
-            timeRange === 'month'
+          className={`px-6 py-3 rounded-lg transition-all transform hover:scale-105 ${timeRange === 'month'
               ? 'bg-blue-500 text-white shadow-lg'
               : 'bg-white text-gray-600 hover:bg-gray-50 shadow'
-          }`}
+            }`}
         >
           This Month
         </button>
@@ -180,8 +177,8 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={aggregatedData.ordersRevenueData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
+                <XAxis
+                  dataKey="date"
                   tickFormatter={(date) => format(new Date(date), 'MMM dd')}
                   stroke="#666"
                 />
@@ -212,8 +209,8 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={aggregatedData.ordersRevenueData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
+                <XAxis
+                  dataKey="date"
                   tickFormatter={(date) => format(new Date(date), 'MMM dd')}
                   stroke="#666"
                 />
@@ -254,7 +251,7 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={hourlyTrafficData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
+                <XAxis
                   dataKey="hour"
                   stroke="#666"
                   tickFormatter={(hour) => hour.split(':')[0]}
@@ -276,35 +273,35 @@ export default function Dashboard() {
           </div>
         </div>
 
-   {/* Category Distribution Pie Chart - Expanded */}
-<div className="bg-white p-6 rounded-xl shadow-lg lg:col-span-2">
-  <div className="flex items-center justify-between mb-6">
-    <h2 className="text-xl font-semibold text-gray-800">Revenue Distribution by Category</h2>
-    <IndianRupee className="w-6 h-6 text-green-500" />
-  </div>
-  <div className="h-96">
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={categoryData}
-          cx="50%"
-          cy="50%"
-          labelLine={true}
-          label={({ name, percentage }) => `${name}: ${percentage}%`}
-          outerRadius={({chartWidth, chartHeight}) => Math.min(chartWidth, chartHeight) / 3}
-          fill="#8884d8"
-          dataKey="value"
-        >
-          {categoryData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip formatter={(value, name, props) => `${props.payload.percentage}%`} />
-      </PieChart>
-    </ResponsiveContainer>
-  </div>
-</div>
-</div>
+        {/* Category Distribution Pie Chart - Expanded */}
+        <div className="bg-white p-6 rounded-xl shadow-lg lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">Revenue Distribution by Category</h2>
+            <IndianRupee className="w-6 h-6 text-green-500" />
+          </div>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={true}
+                  label={({ name, percentage }) => `${name}: ${percentage}%`}
+                  outerRadius={({ chartWidth, chartHeight }) => Math.min(chartWidth, chartHeight) / 3}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value, name, props) => `${props.payload.percentage}%`} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
