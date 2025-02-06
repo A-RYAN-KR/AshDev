@@ -1,4 +1,3 @@
-// 3. orders.schema.ts
 import mongoose, { Schema, Document } from "mongoose";
 
 interface Order extends Document {
@@ -7,6 +6,7 @@ interface Order extends Document {
   total: number;
   status: "pending" | "completed" | "cancelled";
   time: Date;
+  restaurant: mongoose.Types.ObjectId; // Reference to Restaurant
 }
 
 const OrderSchema: Schema = new Schema({
@@ -21,6 +21,11 @@ const OrderSchema: Schema = new Schema({
     default: "pending",
   },
   time: { type: Date, default: Date.now },
+  restaurant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Restaurant",
+    required: true,
+  },
 });
 
 export const OrderModel = mongoose.model<Order>("Order", OrderSchema);

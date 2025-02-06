@@ -15,7 +15,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { Users, ShoppingBag, Utensils, TrendingUp, Calendar, IndianRupee } from 'lucide-react';
+import { Users, ShoppingBag, TrendingUp, Calendar, IndianRupee } from 'lucide-react';
 import axios from 'axios';
 import StatCard from '../components/StatCard';
 

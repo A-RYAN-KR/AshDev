@@ -1,14 +1,13 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-// Define the Table interface
 interface Table extends Document {
   number: number;
   capacity: number;
   status: "available" | "occupied" | "reserved";
   lastOccupied: Date | null;
+  restaurant: mongoose.Types.ObjectId; // Reference to Restaurant
 }
 
-// Define the schema for the table
 const TableSchema: Schema = new Schema({
   number: { type: Number, required: true, unique: true },
   capacity: { type: Number, required: true },
@@ -18,7 +17,11 @@ const TableSchema: Schema = new Schema({
     default: "available",
   },
   lastOccupied: { type: Date, default: null },
+  restaurant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Restaurant",
+    required: true,
+  },
 });
 
-// Export the table model
 export const TableModel = mongoose.model<Table>("Table", TableSchema);

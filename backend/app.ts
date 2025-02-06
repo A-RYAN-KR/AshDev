@@ -10,6 +10,7 @@ import menuRouter from "./routes/menu.route";
 import orderRouter from "./routes/order.route";
 import tableRouter from "./routes/table.route";
 import categoryRouter from "./routes/category.route";
+import restaurantRouter from "./routes/restaurant.route";
 
 
 // body parser
@@ -32,6 +33,7 @@ app.use("/api/v1", menuRouter);
 app.use("/api/v1", orderRouter);
 app.use("/api/v1", tableRouter);
 app.use("/api/v1", categoryRouter);
+app.use("/api/v1", restaurantRouter);
 
 // testing api
 app.get("/test", (req: Request, res: Response, next: NextFunction) => {

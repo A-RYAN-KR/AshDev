@@ -1,4 +1,3 @@
-// 2. menu.schema.ts
 import mongoose, { Schema, Document } from "mongoose";
 
 interface MenuItem extends Document {
@@ -7,6 +6,7 @@ interface MenuItem extends Document {
   category: string;
   description: string;
   isAvailable: boolean;
+  restaurant: Schema.Types.ObjectId; // Reference to Restaurant
 }
 
 const MenuItemSchema: Schema = new Schema({
@@ -15,6 +15,11 @@ const MenuItemSchema: Schema = new Schema({
   category: { type: String, required: true },
   description: { type: String },
   isAvailable: { type: Boolean, default: true },
+  restaurant: {
+    type: Schema.Types.ObjectId,
+    ref: "Restaurant",
+    required: true,
+  },
 });
 
 export const MenuItemModel = mongoose.model<MenuItem>(
