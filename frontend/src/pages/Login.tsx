@@ -67,7 +67,7 @@ const LoginPage: React.FC = () => {
     }
 
     try {
-      const { data } = await axios.post("http://localhost:7000/api/v1/registration", { name, email, password });
+      const { data } = await axios.post("http://localhost:7000/api/v1/registeration", { name, email, password });
 
       toast.success(data.message || "Registration successful!");
 
