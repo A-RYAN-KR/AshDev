@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import Restaurant from "../models/restaurant.model";
 import userModel from "../models/user.model";
-import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 // Create a new restaurant

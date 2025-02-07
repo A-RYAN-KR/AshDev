@@ -11,6 +11,7 @@ interface MenuItem {
   category: string;
   description: string;
   isAvailable: boolean;
+  restaurant: string; 
 }
 
 export default function Menu() {
@@ -23,12 +24,12 @@ export default function Menu() {
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [categoryFormData, setCategoryFormData] = useState({
     categoryName: '',
-    restaurant: '',
+    restaurant: JSON.parse(localStorage.getItem("restaurantId") || ""),
   });
 
   const initialCategoryState = {
     categoryName: '',
-    restaurant: '',
+    restaurant: JSON.parse(localStorage.getItem("restaurantId") || ""),
   }
 
   const initialFormState = {
@@ -37,6 +38,7 @@ export default function Menu() {
     category: '',
     description: '',
     isAvailable: true,
+    restaurant: JSON.parse(localStorage.getItem("restaurantId") || ""),
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -251,17 +253,6 @@ export default function Menu() {
               placeholder="Enter category name"
             />
           </div>
-          <div>
-            <label className="block text-gray-700 font-medium">Restaurant Name</label>
-            <input
-              type="text"
-              name="restaurant"
-              value={categoryFormData.restaurant}
-              onChange={handleCategoryInputChange}
-              className="w-full border rounded-lg px-3 py-2"
-              placeholder="Enter restaurant name"
-            />
-          </div>
           <button
             type="submit"
             className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
@@ -343,6 +334,7 @@ export default function Menu() {
         ))}
       </div>
 
+      {/* Menu form */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">

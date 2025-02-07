@@ -80,7 +80,10 @@ const MONTHS = [
 
 export async function fetchMonthlyRevenue() {
   try {
-    const response = await axios.get(`http://localhost:7000/api/v1/orders`);
+    const restaurantId = JSON.parse(localStorage.getItem("restaurantId"));
+    const response = await axios.get(
+      `http://localhost:7000/api/v1/orders/${restaurantId}`
+    );
     const orders = response.data;
 
     // Filter only "completed" orders

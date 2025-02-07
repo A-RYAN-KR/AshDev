@@ -18,6 +18,7 @@ interface Table {
   capacity: number;
   status: "available" | "occupied" | "reserved";
   lastOccupied: string | null;
+  restaurant: string;
 }
 
 const TableCard = ({
@@ -124,6 +125,7 @@ export default function Tables() {
       capacity: 0,
       status: "available",
       lastOccupied: null,
+      restaurant: JSON.parse(localStorage.getItem("restaurantId") || ""), 
     });
     setShowForm(true);
   };

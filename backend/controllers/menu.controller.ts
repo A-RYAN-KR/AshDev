@@ -1,11 +1,18 @@
 import { Request, Response } from "express";
 import { MenuItemModel } from "../models/menu.model";
+import mongoose from "mongoose";
 
 
 // Controller to add a new menu item
 export const addMenuItem = async (req: Request, res: Response) => {
   try {
-    const { name, price, category, description, isAvailable } = req.body;
+    const { name, price, category, description, isAvailable, restaurant } =
+      req.body;
+
+    // Validate required fields
+    if (!name || !price || !category || !restaurant) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
 
     const newMenuItem = new MenuItemModel({
       name,
@@ -13,6 +20,7 @@ export const addMenuItem = async (req: Request, res: Response) => {
       category,
       description,
       isAvailable,
+      restaurant: new mongoose.Types.ObjectId(restaurant), // Assign restaurant ID
     });
 
     const savedMenuItem = await newMenuItem.save();
@@ -25,6 +33,7 @@ export const addMenuItem = async (req: Request, res: Response) => {
       .json({ message: "Error adding menu item", error: error.message });
   }
 };
+
 
 // Controller to fetch all menu items
 export const getMenuItems = async (req: Request, res: Response) => {

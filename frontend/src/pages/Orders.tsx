@@ -7,6 +7,7 @@ interface Order {
   items: string[];
   total: number;
   status: string;
+  restaurant: string;
   time: string;
 }
 
@@ -37,7 +38,8 @@ export default function Orders() {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        const response = await axios.get("http://localhost:7000/api/v1/orders");
+        const restaurantId = JSON.parse(localStorage.getItem("restaurantId"));
+        const response = await axios.get(`http://localhost:7000/api/v1/orders/${restaurantId}`);
         setOrders(response.data); // Assuming response.data contains the orders
         console.log("Orders fetched:", response.data);
       } catch (error: any) {

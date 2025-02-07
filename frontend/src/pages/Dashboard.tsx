@@ -52,8 +52,9 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    const restaurantId = JSON.parse(localStorage.getItem("restaurantId") || "");
     axios
-      .get('http://localhost:7000/api/v1/orders')
+      .get(`http://localhost:7000/api/v1/orders/${restaurantId}`)
       .then(response => {
         console.log("response.data :", response.data);
         setOrders(response.data);

@@ -100,7 +100,8 @@ const Reports = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('http://localhost:7000/api/v1/orders');
+      const restaurantId = JSON.parse(localStorage.getItem("restaurantId"));
+      const response = await fetch(`http://localhost:7000/api/v1/orders/${restaurantId}`);
       if (!response.ok) throw new Error('Failed to fetch orders');
 
       const ordersData = await response.json();

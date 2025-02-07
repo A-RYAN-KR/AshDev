@@ -4,7 +4,7 @@ import { OrderModel } from "../models/order.model";
 import { MenuItemModel } from "../models/menu.model";
 
 // Fetch all orders
-export const getOrders = async (req: Request, res: Response): Promise<void> => {
+export const getAllOrders = async (req: Request, res: Response): Promise<void> => {
   try {
     const orders = await OrderModel.find()
       .populate("table", "number")
@@ -17,12 +17,20 @@ export const getOrders = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+
+
 export const createOrder = async (req: Request, res: Response) => {
   try {
-    const { table, items, status } = req.body;
+    const { table, items, status, restaurant } = req.body; // Extract restaurant ID from body
 
     // Validate request body
-    if (!table || !items || !Array.isArray(items) || items.length === 0) {
+    if (
+      !table ||
+      !items ||
+      !Array.isArray(items) ||
+      items.length === 0 ||
+      !restaurant
+    ) {
       return res
         .status(400)
         .json({ message: "Missing or invalid required fields." });
@@ -51,7 +59,8 @@ export const createOrder = async (req: Request, res: Response) => {
       table: new mongoose.Types.ObjectId(table),
       items: items.map((item: string) => new mongoose.Types.ObjectId(item)),
       total,
-      status: orderStatus, // Assign status here
+      status: orderStatus,
+      restaurant: new mongoose.Types.ObjectId(restaurant), // Assign restaurant ID from body
     });
 
     // Save the order to the database
@@ -63,6 +72,29 @@ export const createOrder = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Error creating order:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// fetch a particular order by restaurant ID
+export const getOrders = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { restaurantId } = req.params; // Extract restaurantId from URL
+
+    if (!restaurantId) {
+      res
+        .status(400)
+        .json({ message: "Restaurant ID is required in the URL." });
+      return;
+    }
+
+    const orders = await OrderModel.find({ restaurant: restaurantId })
+      .populate("table", "number")
+      .populate("items", "name price category");
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
     res.status(500).json({ message: "Internal server error." });
   }
 };
